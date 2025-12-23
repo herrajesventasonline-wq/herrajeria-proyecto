@@ -1,0 +1,51 @@
+/* Estilos para el sistema de filtros */
+.filter-options {
+    max-height: 300px;
+    overflow-y: auto;
+    padding: 10px;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+}
+
+.price-filter .row {
+    margin-bottom: 10px;
+}
+
+.product-badges {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    z-index: 1;
+}
+
+.product-badges .badge {
+    margin-right: 5px;
+}
+
+.thumbnail {
+    width: 60px;
+    height: 60px;
+    object-fit: cover;
+    cursor: pointer;
+    border: 2px solid transparent;
+    border-radius: 4px;
+    margin: 0 5px;
+}
+
+.thumbnail.active {
+    border-color: #0d6efd;
+}
+
+.quantity-controls .btn {
+    width: 40px;
+}
+
+@media (max-width: 768px) {
+    .filter-options {
+        max-height: 200px;
+    }
+    
+    .product-image {
+        height: 150px !important;
+    }
+}
