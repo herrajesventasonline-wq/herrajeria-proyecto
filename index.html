@@ -7,21 +7,12 @@
     <title>Herraje RioIv - Materiales Industriales Premium</title>
      <!-- Configuración segura -->
       <!-- Configuración -->
+<!-- En tu index.html, justo después de <body> -->
 <script>
-    // Detectar si estamos en desarrollo
-    const isDevelopment = window.location.hostname === 'localhost' || 
-                         window.location.hostname === '127.0.0.1';
-    
-    if (isDevelopment) {
-        console.log('🚀 Modo desarrollo detectado');
-        // En desarrollo, cargamos config.js
-        document.write('<script src="/js/config.js"><\/script>');
-    } else {
-        console.log('🚀 Modo producción');
-        // En producción, Netlify inyectará las variables
-        window.SUPABASE_URL = '{{SUPABASE_URL}}';
-        window.SUPABASE_ANON_KEY = '{{SUPABASE_ANON_KEY}}';
-    }
+  // INYECCIÓN TEMPORAL
+  window.SUPABASE_URL = 'https://opueqifkagoonpbubflj.supabase.co';
+  window.SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9wdWVxaWZrYWdvb25wYnViZmxqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMzNDc3OTksImV4cCI6MjA3ODkyMzc5OX0.8ES1VbCKOu79JrMpPNTkUuDZmo9MOHsVZunui4CJYSI';
+  console.log('⚠️ Variables inyectadas directamente en HTML');
 </script>
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -1484,4 +1475,5 @@
 </body>
 
 </html>
+
 
