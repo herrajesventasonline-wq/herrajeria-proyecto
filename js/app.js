@@ -3728,10 +3728,7 @@ function updateOrdersUI() {
                     <i class="fas fa-box-open fa-3x text-muted mb-3"></i>
                     <h5 class="text-muted">No hay pedidos en tu historial</h5>
                     <p class="text-muted">Realiza tu primer pedido para verlo aquí</p>
-                    <button class="btn btn-primary mt-3" 
-                            onclick="hideModal('ordersHistory'); scrollToProductsSection();">
-                        <i class="fas fa-shopping-cart me-2"></i>Ir a Comprar
-                    </button>
+                   
                 </div>
             `;
         }
@@ -4582,9 +4579,7 @@ function loadUserOrdersWithPagination(page = 1) {
                 <i class="fas fa-box-open fa-3x text-muted mb-3"></i>
                 <h5 class="text-muted">No hay pedidos anteriores</h5>
                 <p class="text-muted">Realiza tu primer pedido para verlo aquí</p>
-                <button class="btn btn-primary mt-3" onclick="hideModal('ordersHistory'); scrollToProductsSection();">
-                    <i class="fas fa-shopping-cart me-2"></i>Ir a Comprar
-                </button>
+                
             </div>
         `;
 
@@ -4632,7 +4627,7 @@ function loadUserOrdersWithPagination(page = 1) {
             userOrdersList.innerHTML = `
                 <div class="text-center text-muted py-3">
                     <i class="fas fa-box-open"></i>
-                    <p class="mb-0">No hay pedidos recientes</p>
+                    
                 </div>
             `;
             return;
