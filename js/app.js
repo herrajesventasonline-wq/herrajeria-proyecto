@@ -5732,3 +5732,157 @@ function updateFilterBadgeCount() {
         badge.style.display = 'none';
     }
 }
+
+// Versión corregida y simplificada del JavaScript
+document.addEventListener('DOMContentLoaded', function() {
+    // Elementos del menú
+    const mobileMenuToggle = document.getElementById('mobileMenuToggle');
+    const mobileCloseBtn = document.getElementById('mobileCloseBtn');
+    const mobileNavContainer = document.getElementById('mobileNavContainer');
+    const body = document.body;
+    
+    // Función para abrir/cerrar el menú
+    function toggleMobileMenu() {
+        console.log('Toggle menu clicked'); // Para depuración
+        
+        if (mobileNavContainer.classList.contains('active')) {
+            // Cerrar menú
+            mobileNavContainer.classList.remove('active');
+            body.classList.remove('menu-open');
+        } else {
+            // Abrir menú
+            mobileNavContainer.classList.add('active');
+            body.classList.add('menu-open');
+        }
+    }
+    
+    // Función para cerrar el menú
+    function closeMobileMenu() {
+        console.log('Close menu clicked'); // Para depuración
+        mobileNavContainer.classList.remove('active');
+        body.classList.remove('menu-open');
+    }
+    
+    // Event listeners
+    if (mobileMenuToggle) {
+        mobileMenuToggle.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            toggleMobileMenu();
+        });
+    }
+    
+    if (mobileCloseBtn) {
+        mobileCloseBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            closeMobileMenu();
+        });
+    }
+    
+    // Cerrar menú al hacer clic en un enlace
+    const mobileLinks = document.querySelectorAll('.mobile-nav-link, .mobile-dropdown-link, .mobile-action-link');
+    mobileLinks.forEach(link => {
+        link.addEventListener('click', function(e) {
+            if (!this.classList.contains('mobile-dropdown-toggle')) {
+                setTimeout(closeMobileMenu, 300);
+            }
+        });
+    });
+    
+    // Dropdowns para móvil
+    const dropdownToggles = document.querySelectorAll('.mobile-dropdown-toggle');
+    dropdownToggles.forEach(toggle => {
+        toggle.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const dropdown = this.nextElementSibling;
+            const arrow = this.querySelector('.dropdown-arrow');
+            
+            // Cerrar otros dropdowns
+            document.querySelectorAll('.mobile-dropdown').forEach(d => {
+                if (d !== dropdown) d.classList.remove('active');
+            });
+            
+            // Rotar flechas
+            document.querySelectorAll('.dropdown-arrow').forEach(a => {
+                if (a !== arrow) a.classList.remove('rotated');
+            });
+            
+            // Alternar dropdown actual
+            dropdown.classList.toggle('active');
+            arrow.classList.toggle('rotated');
+        });
+    });
+    
+    // Cerrar menú al hacer clic fuera
+    document.addEventListener('click', function(e) {
+        if (mobileNavContainer.classList.contains('active') && 
+            !mobileNavContainer.contains(e.target) && 
+            e.target !== mobileMenuToggle) {
+            closeMobileMenu();
+        }
+    });
+    
+    // Cerrar con tecla Escape
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && mobileNavContainer.classList.contains('active')) {
+            closeMobileMenu();
+        }
+    });
+    
+    // Sincronizar badge del carrito
+    function updateMobileCartBadge() {
+        const cartBadge = document.querySelector('.cart-badge');
+        const mobileCartBadge = document.getElementById('mobileCartBadge');
+        if (cartBadge && mobileCartBadge) {
+            mobileCartBadge.textContent = cartBadge.textContent;
+        }
+    }
+    
+    // Observar cambios en el badge del carrito
+    const observer = new MutationObserver(updateMobileCartBadge);
+    const cartBadge = document.querySelector('.cart-badge');
+    if (cartBadge) {
+        observer.observe(cartBadge, { childList: true, characterData: true });
+        updateMobileCartBadge(); // Sincronizar inicialmente
+    }
+    
+    // Búsqueda móvil
+    const mobileSearchButton = document.getElementById('mobileSearchButton');
+    const mobileSearchInput = document.getElementById('mobileSearchInput');
+    
+    if (mobileSearchButton && mobileSearchInput) {
+        mobileSearchButton.addEventListener('click', function() {
+            const searchTerm = mobileSearchInput.value.trim();
+            if (searchTerm) {
+                // Usar la misma función de búsqueda que el escritorio
+                if (typeof window.performSearch === 'function') {
+                    window.performSearch(searchTerm);
+                }
+                closeMobileMenu();
+            }
+        });
+        
+        mobileSearchInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                const searchTerm = this.value.trim();
+                if (searchTerm) {
+                    if (typeof window.performSearch === 'function') {
+                        window.performSearch(searchTerm);
+                    }
+                    closeMobileMenu();
+                }
+            }
+        });
+    }
+});
+
+// Función global para actualizar el badge (llamada desde app.js)
+window.updateMobileCartBadge = function(count) {
+    const mobileCartBadge = document.getElementById('mobileCartBadge');
+    if (mobileCartBadge) {
+        mobileCartBadge.textContent = count;
+    }
+};
