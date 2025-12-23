@@ -8,12 +8,22 @@
      <!-- Configuración segura -->
 
     
-    <!-- Solo en desarrollo: carga config.js -->
-         <script>
-           window.SUPABASE_URL = 'https://opueqifkagoonpbubflj.supabase.co';
-           window.SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3Mi...';
-           console.log('✅ Claves cargadas desde HTML');
-       </script>
+       <script>
+    // Detectar si estamos en desarrollo
+    const isDevelopment = window.location.hostname === 'localhost' || 
+                         window.location.hostname === '127.0.0.1';
+    
+    if (isDevelopment) {
+        console.log('🚀 Modo desarrollo detectado');
+        // En desarrollo, cargamos config.js
+        document.write('<script src="/js/config.js"><\/script>');
+    } else {
+        console.log('🚀 Modo producción');
+        // En producción, Netlify inyectará las variables
+        window.SUPABASE_URL = '{{SUPABASE_URL}}';
+        window.SUPABASE_ANON_KEY = '{{SUPABASE_ANON_KEY}}';
+    }
+</script>
 
     <meta name="description" content="Panel de administración para gestión de productos de herrajería">
     <meta name="author" content="Herrajería">
@@ -773,4 +783,5 @@
 
 
 </html>
+
 
