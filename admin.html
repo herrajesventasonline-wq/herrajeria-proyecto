@@ -13,12 +13,11 @@
     </script>
     
     <!-- Solo en desarrollo: carga config.js -->
-    <script>
-        if (window.location.hostname === 'localhost' || 
-            window.location.hostname === '127.0.0.1') {
-            document.write('<script src="config.js"><\/script>');
-        }
-    </script>
+         <script>
+           window.SUPABASE_URL = 'https://opueqifkagoonpbubflj.supabase.co';
+           window.SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3Mi...';
+           console.log('✅ Claves cargadas desde HTML');
+       </script>
 
     <meta name="description" content="Panel de administración para gestión de productos de herrajería">
     <meta name="author" content="Herrajería">
@@ -775,5 +774,6 @@
     <script src="js/price-adjustment-fixed.js"></script>
 
 </body>
+
 
 </html>
