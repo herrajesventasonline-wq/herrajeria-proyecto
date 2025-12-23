@@ -38,7 +38,7 @@ h6 {
     font-weight: 800;
 }
 h5{
-    font-size: 2.25rem;
+    font-size: 1.4rem;
 }
 
 
@@ -2164,6 +2164,7 @@ h5{
         padding: 8px 12px;
         font-size: 0.8rem;
     }
+    
 }
 
 /* Dispositivos muy pequeños */
@@ -2183,7 +2184,7 @@ h5{
     }
     
     .card-body {
-        padding: 15px;
+        padding: 10px;
          
     }
     
@@ -2251,7 +2252,7 @@ h5{
 /* Optimizaciones para móviles en las cards de productos */
 @media (max-width: 768px) {
     .product-card .card-body {
-        padding: 15px 12px;
+        padding: 10px 8px;
     }
     
     .price-container {
@@ -3248,7 +3249,7 @@ h5{
     }
     
     #logoutConfirmModal .modal-body {
-        padding: 20px;
+        padding: 15px;
     }
     
     #logoutConfirmModal .modal-footer {
@@ -3583,7 +3584,7 @@ h5{
 /* Responsive adjustments */
 @media (max-width: 768px) {
     .order-history-card .card-body {
-        padding: 1rem;
+        padding: 0.8rem;
     }
     
     .order-history-card h5, 
@@ -3722,6 +3723,6 @@ h5{
     }
     
     .product-card .card-body {
-        padding: 15px 10px;
+        padding: 12px 8px;
     }
 }
