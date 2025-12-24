@@ -135,7 +135,7 @@ h5{
 .user-actions a {
     color: white;
     text-decoration: none;
-    margin-left: 15px;
+   
     font-weight: 500;
     transition: var(--transition);
 }
@@ -2709,6 +2709,328 @@ h5{
    ============================================ */
 
 /* Contenedor principal del zoom */
+/* ============================================
+   MEJORAS ESPECÍFICAS PARA ZOOM EN MÓVILES
+   ============================================ */
+
+/* Optimizar contenedor de zoom para móviles */
+@media (max-width: 768px) {
+    .image-zoom-wrapper {
+        height: 280px !important;
+        max-height: 50vh;
+        cursor: grab;
+        touch-action: pan-y pinch-zoom;
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        user-select: none;
+    }
+    
+    .image-zoom-wrapper:active {
+        cursor: grabbing;
+    }
+    
+    .image-zoom-wrapper img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        pointer-events: auto;
+    }
+    
+    /* Ocultar zoom lens en móviles */
+    .zoom-lens {
+        display: none !important;
+    }
+    
+    /* Ajustar controles de navegación */
+    .zoom-nav-controls {
+        top: 50%;
+        padding: 0 5px;
+    }
+    
+    .zoom-nav-btn {
+        width: 36px;
+        height: 36px;
+        opacity: 0.9;
+        background: rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(8px);
+        border: 2px solid rgba(255, 255, 255, 0.3);
+    }
+    
+    .zoom-counter {
+        bottom: 10px;
+        right: 10px;
+        font-size: 0.8rem;
+        padding: 4px 8px;
+        background: rgba(0, 0, 0, 0.8);
+    }
+}
+
+/* Dispositivos muy pequeños (hasta 480px) */
+@media (max-width: 480px) {
+    .image-zoom-wrapper {
+        height: 220px !important;
+        max-height: 45vh;
+    }
+    
+    .zoom-nav-btn {
+        width: 32px;
+        height: 32px;
+    }
+    
+    .zoom-nav-btn i {
+        font-size: 0.9rem;
+    }
+    
+    .touch-hint {
+        font-size: 0.7rem;
+        padding: 6px 10px;
+        left: 5px;
+        bottom: 5px;
+    }
+}
+
+/* Tablets en modo vertical (hasta 768px) */
+@media (min-width: 481px) and (max-width: 768px) {
+    .image-zoom-wrapper {
+        height: 320px !important;
+        max-height: 55vh;
+    }
+}
+
+/* ============================================
+   MEJORAS PARA EL SLIDER TÁCTIL
+   ============================================ */
+.touch-slider-container {
+    position: relative;
+    overflow: hidden;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.touch-slider-track {
+    display: flex;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    height: 100%;
+}
+
+.touch-slide {
+    flex: 0 0 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px;
+}
+
+.touch-slide img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    border-radius: 4px;
+}
+
+/* Dots del slider táctil */
+.touch-slider-dots {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 10px;
+    padding: 5px;
+}
+
+.touch-slider-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.2);
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.touch-slider-dot.active {
+    background: var(--secondary);
+    transform: scale(1.3);
+}
+
+/* ============================================
+   ZOOM COMPLETO MEJORADO PARA MÓVILES
+   ============================================ */
+.fullscreen-zoom-modal.active {
+    display: flex !important;
+    animation: zoomFadeIn 0.3s ease-out;
+}
+
+.fullscreen-zoom-content {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.fullscreen-zoom-img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    transition: transform 0.1s linear;
+    transform-origin: center center;
+}
+
+.fullscreen-zoom-controls {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 10001;
+}
+
+.fullscreen-zoom-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.7);
+    border: none;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    cursor: pointer;
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+}
+
+.fullscreen-zoom-btn:hover {
+    background: rgba(0, 0, 0, 0.9);
+    transform: scale(1.1);
+}
+
+.fullscreen-zoom-counter {
+    position: fixed;
+    bottom: 20px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    color: white;
+    font-size: 1rem;
+    background: rgba(0, 0, 0, 0.5);
+    padding: 10px;
+    backdrop-filter: blur(5px);
+    z-index: 10001;
+}
+
+@keyframes zoomFadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* ============================================
+   MEJORAS PARA MINIATURAS EN MÓVILES
+   ============================================ */
+@media (max-width: 768px) {
+    .thumbnail-container {
+        padding: 8px 0;
+        gap: 6px;
+        margin-top: 10px;
+    }
+    
+    .thumbnail {
+        width: 60px;
+        height: 60px;
+        opacity: 0.7;
+        border: 2px solid transparent;
+    }
+    
+    .thumbnail.active,
+    .thumbnail:active {
+        opacity: 1;
+        border-color: var(--secondary);
+        transform: scale(1.05);
+    }
+}
+
+/* ============================================
+   MEJORAS DE GESTOS TÁCTILES
+   ============================================ */
+/* Feedback visual para gestos */
+.touch-feedback {
+    position: absolute;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: rgba(0, 212, 255, 0.2);
+    border: 2px solid var(--secondary);
+    pointer-events: none;
+    z-index: 1000;
+    animation: pulseTouch 0.5s ease-out;
+    display: none;
+}
+
+@keyframes pulseTouch {
+    0% {
+        transform: scale(0.5);
+        opacity: 0.8;
+    }
+    100% {
+        transform: scale(1.5);
+        opacity: 0;
+    }
+}
+
+/* Prevenir zoom del navegador en imágenes */
+@media (max-width: 768px) {
+    .product-gallery {
+        touch-action: pan-y pinch-zoom;
+    }
+    
+    .image-zoom-wrapper,
+    .touch-slider-container {
+        -webkit-text-size-adjust: 100%;
+        -moz-text-size-adjust: 100%;
+        text-size-adjust: 100%;
+    }
+}
+
+/* ============================================
+   MEJORA DE RENDIMIENTO PARA IMÁGENES
+   ============================================ */
+.performance-optimized {
+    content-visibility: auto;
+    contain: layout style paint;
+}
+
+/* Loading state para imágenes */
+.image-loading {
+    position: relative;
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: loading 1.5s infinite;
+}
+
+.image-loading::after {
+    content: 'Cargando...';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: var(--gray);
+    font-size: 0.9rem;
+}
+
+@keyframes loading {
+    0% {
+        background-position: 200% 0;
+    }
+    100% {
+        background-position: -200% 0;
+    }
+}
 .image-zoom-wrapper {
     position: relative;
     width: 100%;
@@ -3954,13 +4276,13 @@ h5{
             }
 
             .header-main .row {
-                justify-content: space-between;
+                justify-content: center;
             }
 
             .header-main .logo {
-                font-size: 1.8rem;
+                font-size: 1.5rem;
                 justify-content: center;
-                margin-left: 50px;
+                
             }
 
             .search-box {
@@ -4086,7 +4408,7 @@ h5{
     
     /* Ajusta el header para móviles */
     .header-main .row {
-        justify-content: space-between !important;
+        justify-content: center !important;
     }
     
     .header-main .col-md-3.col-6 {
@@ -4130,4 +4452,452 @@ h5{
 /* Previene el scroll del body cuando el menú está abierto */
 body.menu-open {
     overflow: hidden;
+}
+
+
+
+/* Responsive para carrusel */
+@media (max-width: 768px) {
+    .carousel-slide {
+        cursor: pointer !important;
+        height: 250px !important;
+    }
+    
+    .slide-image-wrapper {
+        height: 100% !important;
+        width: 100% !important;
+    }
+    
+    .slide-image-wrapper img {
+        height: 100% !important;
+        width: 100% !important;
+        object-fit: cover !important;
+    }
+    
+    .hero-content {
+        padding: 20px !important;
+    }
+    
+    .hero-content h1 {
+        font-size: 1.5rem !important;
+    }
+    
+    .hero-content p {
+        font-size: 0.9rem !important;
+        display: none; /* Ocultar texto en móviles para mejor espacio */
+    }
+    
+    .carousel-indicators {
+        bottom: 10px !important;
+    }
+}
+
+@media (max-width: 576px) {
+    .carousel-slide {
+        height: 440px !important;
+    }
+    
+    .hero-content h1 {
+        font-size: 1.2rem !important;
+        margin-bottom: 5px !important;
+    }
+    
+    .hero-content .btn {
+        padding: 8px 15px !important;
+        font-size: 0.9rem !important;
+    }
+}
+
+/* Responsive para tarjetas de categoría */
+@media (max-width: 768px) {
+    .category-card {
+        margin-bottom: 15px !important;
+        cursor: pointer !important;
+    }
+    
+    .category-card img {
+        height: 150px !important;
+        object-fit: cover !important;
+        width: 100% !important;
+    }
+    
+    .category-card .card-body {
+        padding: 15px !important;
+    }
+    
+    .category-card h5 {
+        font-size: 1rem !important;
+        margin-bottom: 8px !important;
+    }
+    
+    .category-card .card-text {
+        font-size: 0.8rem !important;
+        margin-bottom: 10px !important;
+    }
+    
+    .category-card .btn {
+        padding: 6px 12px !important;
+        font-size: 0.8rem !important;
+        width: 100% !important;
+    }
+}
+
+@media (max-width: 576px) {
+    .category-card img {
+        height: 120px !important;
+    }
+    
+    .col-6 {
+        padding-left: 5px !important;
+        padding-right: 5px !important;
+    }
+}
+
+/* Responsive para menús móviles */
+@media (max-width: 768px) {
+    .mobile-dropdown-link {
+        cursor: pointer !important;
+        padding: 12px 15px !important;
+        font-size: 0.9rem !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 10px !important;
+    }
+    
+    .mobile-dropdown-link i {
+        font-size: 1rem !important;
+        width: 20px !important;
+    }
+}
+
+/* Asegurar que los elementos sean cliqueables en móviles */
+.carousel-slide,
+.category-card,
+.dropdown-item,
+.mobile-dropdown-link {
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+}
+
+/* Mejorar feedback táctil */
+@media (hover: none) and (pointer: coarse) {
+    .carousel-slide:active,
+    .category-card:active,
+    .dropdown-item:active,
+    .mobile-dropdown-link:active {
+        opacity: 0.7;
+        transform: scale(0.98);
+        transition: all 0.2s ease;
+    }
+}
+
+/* Loading state para productos */
+#products-loading {
+    text-align: center;
+    padding: 40px;
+    color: var(--text-secondary);
+}
+
+#products-loading .spinner-border {
+    width: 3rem;
+    height: 3rem;
+}
+
+/* ============================================
+   ALERTAS RESPONSIVAS (TOASTS) - CORREGIDAS
+   ============================================ */
+
+/* Contenedor de alertas */
+.toast-container {
+    z-index: 99999;
+    position: fixed;
+    padding: 1rem;
+}
+
+/* Alertas base */
+.toast {
+    min-width: 300px;
+    max-width: 400px;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    border: none;
+    overflow: hidden;
+    backdrop-filter: blur(10px);
+    margin-bottom: 15px;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    transform-origin: center;
+}
+
+/* Desktop (mayor a 768px) */
+@media (min-width: 769px) {
+    .toast-container {
+        top: 20px;
+        right: 20px;
+        bottom: auto;
+        left: auto;
+        max-width: 400px;
+    }
+    
+    .toast {
+        animation: slideInRight 0.4s ease-out;
+    }
+    
+    @keyframes slideInRight {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+}
+
+/* Tablets (576px - 768px) */
+@media (max-width: 768px) and (min-width: 577px) {
+    .toast-container {
+        top: 10px;
+        right: 10px;
+        left: 10px;
+        bottom: auto;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+    }
+    
+    .toast {
+        width: 100%;
+        max-width: 100%;
+        min-width: unset;
+        animation: slideInDown 0.4s ease-out;
+    }
+    
+    .toast .d-flex {
+        padding: 12px;
+    }
+    
+    .toast-body {
+        font-size: 0.95rem;
+        padding: 8px 12px;
+    }
+    
+    @keyframes slideInDown {
+        from {
+            transform: translateY(-100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+}
+
+/* Móviles grandes (425px - 576px) */
+@media (max-width: 576px) and (min-width: 376px) {
+    .toast-container {
+        top: 5px;
+        right: 5px;
+        left: 5px;
+        bottom: auto;
+        padding: 10px;
+    }
+    
+    .toast {
+        width: 100%;
+        max-width: 100%;
+        min-width: unset;
+        margin-bottom: 10px;
+        border-radius: 10px;
+    }
+    
+    .toast .d-flex {
+        padding: 10px;
+        min-height: 60px;
+    }
+    
+    .toast-body {
+        font-size: 0.9rem;
+        padding: 6px 10px;
+        line-height: 1.4;
+    }
+    
+    .btn-close {
+        width: 20px;
+        height: 20px;
+        font-size: 0.8rem;
+        padding: 5px;
+    }
+}
+
+/* Móviles pequeños (hasta 425px) */
+@media (max-width: 425px) {
+    .toast-container {
+        top: 0;
+        right: 0;
+        left: 0;
+        bottom: auto;
+        padding: 8px;
+        max-height: 50vh;
+        overflow-y: auto;
+    }
+    
+    .toast {
+        width: 100%;
+        max-width: 100%;
+        min-width: unset;
+        margin-bottom: 8px;
+        border-radius: 8px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    }
+    
+    .toast .d-flex {
+        padding: 8px;
+        min-height: 55px;
+        align-items: center;
+    }
+    
+    .toast-body {
+        font-size: 0.85rem;
+        padding: 5px 8px;
+        line-height: 1.3;
+        flex: 1;
+    }
+    
+    .btn-close {
+        width: 18px;
+        height: 18px;
+        font-size: 0.7rem;
+        padding: 4px;
+        margin: 0;
+    }
+    
+    /* Para alertas muy importantes */
+    .toast-important {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 90%;
+        max-width: 320px;
+        z-index: 999999;
+        animation: popIn 0.3s ease-out;
+    }
+    
+    @keyframes popIn {
+        from {
+            transform: translate(-50%, -50%) scale(0.8);
+            opacity: 0;
+        }
+        to {
+            transform: translate(-50%, -50%) scale(1);
+            opacity: 1;
+        }
+    }
+}
+
+/* Estados de la alerta */
+.toast.show {
+    display: flex !important;
+}
+
+.toast.hiding {
+    opacity: 0;
+    transform: scale(0.9);
+    transition: all 0.3s ease;
+}
+
+/* Tipos de alertas con colores */
+.toast-success {
+    background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+    border-left: 4px solid #28a745;
+}
+
+.toast-error {
+    background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+    border-left: 4px solid #dc3545;
+}
+
+.toast-warning {
+    background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+    border-left: 4px solid #ffc107;
+}
+
+.toast-info {
+    background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
+    border-left: 4px solid #17a2b8;
+}
+
+/* Íconos para cada tipo */
+.toast-success .toast-body::before {
+    content: "✓ ";
+    font-weight: bold;
+    color: #28a745;
+    margin-right: 5px;
+}
+
+.toast-error .toast-body::before {
+    content: "✗ ";
+    font-weight: bold;
+    color: #dc3545;
+    margin-right: 5px;
+}
+
+.toast-warning .toast-body::before {
+    content: "⚠ ";
+    font-weight: bold;
+    color: #ffc107;
+    margin-right: 5px;
+}
+
+.toast-info .toast-body::before {
+    content: "ℹ ";
+    font-weight: bold;
+    color: #17a2b8;
+    margin-right: 5px;
+}
+
+/* Mejorar la función showToast para dispositivos móviles */
+@media (max-width: 768px) {
+    .toast {
+        pointer-events: auto;
+        touch-action: manipulation;
+    }
+    
+    .toast .btn-close {
+        -webkit-tap-highlight-color: transparent;
+        min-width: 44px;
+        min-height: 44px;
+    }
+}
+
+/* Ajustes para orientación horizontal en móviles */
+@media (max-width: 768px) and (orientation: landscape) {
+    .toast-container {
+        top: 5px;
+        bottom: auto;
+        max-height: 40vh;
+    }
+    
+    .toast {
+        min-height: 50px;
+    }
+    
+    .toast-body {
+        font-size: 0.8rem;
+    }
+}
+
+/* Soporte para modo oscuro en móviles */
+@media (prefers-color-scheme: dark) and (max-width: 768px) {
+    .toast {
+        background: rgba(30, 30, 30, 0.95) !important;
+        color: white !important;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .toast .btn-close {
+        filter: invert(1);
+    }
 }
