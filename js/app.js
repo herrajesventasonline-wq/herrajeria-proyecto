@@ -181,8 +181,13 @@ function getDefaultImage(productName = 'Sin Imagen') {
 
     return canvas.toDataURL('image/png');
 }
-
 function showToast(type, message) {
+    // Limitar mensajes muy largos en móviles
+    let displayMessage = message;
+    if (window.innerWidth <= 480 && message.length > 100) {
+        displayMessage = message.substring(0, 97) + '...';
+    }
+    
     let toastId = type === 'success' ? 'successToast' : 'errorToast';
     let toast = document.getElementById(toastId);
 
@@ -191,7 +196,7 @@ function showToast(type, message) {
         if (!toastContainer) {
             toastContainer = document.createElement('div');
             toastContainer.id = 'toast-container';
-            toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+            toastContainer.className = 'toast-container';
             document.body.appendChild(toastContainer);
         }
 
@@ -201,13 +206,19 @@ function showToast(type, message) {
         toast.setAttribute('role', 'alert');
         toast.setAttribute('aria-live', 'assertive');
         toast.setAttribute('aria-atomic', 'true');
+        toast.setAttribute('data-bs-delay', '3000');
+
+        // Para móviles pequeños, agregar clase adicional
+        if (window.innerWidth <= 425) {
+            toast.classList.add('toast-mobile');
+        }
 
         toast.innerHTML = `
             <div class="d-flex">
                 <div class="toast-body">
-                    ${message}
+                    ${displayMessage}
                 </div>
-                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Cerrar"></button>
             </div>
         `;
 
@@ -215,14 +226,30 @@ function showToast(type, message) {
     } else {
         const toastBody = toast.querySelector('.toast-body');
         if (toastBody) {
-            toastBody.textContent = message;
+            toastBody.textContent = displayMessage;
         }
     }
 
-    const bsToast = new bootstrap.Toast(toast, {
-        delay: 3000
-    });
-    bsToast.show();
+    // Usar Bootstrap Toast si está disponible
+    if (typeof bootstrap !== 'undefined' && bootstrap.Toast) {
+        const bsToast = new bootstrap.Toast(toast, {
+            delay: 3000,
+            animation: true
+        });
+        bsToast.show();
+    } else {
+        // Fallback manual
+        toast.classList.add('show');
+        setTimeout(() => {
+            toast.classList.remove('show');
+            toast.classList.add('hiding');
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.remove();
+                }
+            }, 300);
+        }, 3000);
+    }
 }
 
 function showModal(modalName) {
@@ -611,14 +638,28 @@ function waitForSupabase() {
         }, 200);
     });
 }
+function ensureBestSellingVisible() {
+    // Solo mostrar si hay productos más vendidos
+    if (bestSellingProducts && bestSellingProducts.length > 0) {
+        const bestSellingSection = document.getElementById('best-selling-section');
+        if (bestSellingSection) {
+            // Solo mostrar si estamos en la página de inicio o catálogo general
+            const productsSection = document.getElementById('products-section');
+            if (!productsSection || productsSection.style.display === 'none') {
+                bestSellingSection.style.display = 'block';
+            }
+        }
+    }
+}
 // ============================================
 // FUNCIONES DE INICIALIZACIÓN
 // ============================================
-
-async function loadInitialData() {
+function loadInitialData() {
     console.log('📦 Cargando datos iniciales...');
-    await loadProductsFromSupabase();
-    loadCartFromStorage();
+    loadProductsFromSupabase().then(() => {
+        loadCartFromStorage();
+        ensureBestSellingVisible(); // Añadir esta línea
+    });
 }
 function initializeModals() {
     console.log('🔧 Inicializando modales...');
@@ -927,6 +968,12 @@ function displayProducts(productsToDisplay = products, title = "Productos") {
 
     renderCurrentPage();
     scrollToProductsSection();
+    
+    // NO ocultar la sección de productos más vendidos - ELIMINAR ESTAS LÍNEAS:
+    // const mostClickedSection = document.getElementById('most-clicked-section');
+    // const bestSellingSection = document.getElementById('best-selling-section');
+    // if (mostClickedSection) mostClickedSection.style.display = 'none';
+    // if (bestSellingSection) bestSellingSection.style.display = 'none';
 }
 
 function displayProductsPage(productsToDisplay) {
@@ -1125,7 +1172,83 @@ function performSearch() {
         scrollToProductsSection();
     }
 }
+// ============================================
+// FUNCIÓN PARA RESETEAR PAGINACIÓN AL INICIO
+// ============================================
 
+function resetCatalogToHome() {
+    // Ocultar secciones específicas
+    const mostClickedSection = document.getElementById('most-clicked-section');
+    const bestSellingSection = document.getElementById('best-selling-section');
+    
+    if (mostClickedSection) mostClickedSection.style.display = 'none';
+    if (bestSellingSection) bestSellingSection.style.display = 'block';
+    
+    // Mostrar productos destacados
+    loadPopularProducts();
+    
+    // Resetear filtros
+    currentCategory = null;
+    activeSubcategoryFilters = [];
+    priceRange = { min: 0, max: Infinity };
+    
+    // Limpiar búsqueda
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) searchInput.value = '';
+    
+    const mobileSearchInput = document.getElementById('mobileSearchInput');
+    if (mobileSearchInput) mobileSearchInput.value = '';
+    
+    // Ocultar sección de productos filtrados
+    const productsSection = document.getElementById('products-section');
+    if (productsSection) {
+        productsSection.style.display = 'none';
+    }
+    
+    // Scroll al principio de la página
+    window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+    });
+    
+    // Mostrar mensaje
+    showToast('info', 'Volviendo al inicio del catálogo');
+}
+// ============================================
+// FUNCIÓN PARA IR AL INICIO DEL CATÁLOGO
+// ============================================
+function goToCatalogHome() {
+    console.log('🏠 Navegando al inicio del catálogo...');
+    
+    // Ocultar sección de productos filtrados
+    const productsSection = document.getElementById('products-section');
+    if (productsSection) {
+        productsSection.style.display = 'none';
+    }
+    
+    // Mostrar productos más vendidos
+    const bestSellingSection = document.getElementById('best-selling-section');
+    if (bestSellingSection) {
+        bestSellingSection.style.display = 'block';
+    }
+    
+    // Resetear filtros
+    currentCategory = null;
+    activeSubcategoryFilters = [];
+    priceRange = { min: 0, max: Infinity };
+    
+    // Limpiar búsqueda
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) searchInput.value = '';
+    
+    // Scroll al principio de la página
+    window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+    });
+    
+    showToast('info', 'Volviendo al inicio del catálogo');
+}
 function filterByCategory(categoryName) {
     console.log(`Filtrando por categoría: ${categoryName}`);
 
@@ -1148,6 +1271,11 @@ function filterByCategory(categoryName) {
     }
 
     displayFilteredProductsWithFilters(filteredProducts, categoryName);
+    
+    // Desplazarse a la sección de productos
+    setTimeout(() => {
+        scrollToProductsSection();
+    }, 300);
 }
 
 function displayFilteredProductsWithFilters(filteredProducts, categoryName) {
@@ -1420,14 +1548,87 @@ function clearAllFilters() {
     updateFilterBadgeCount();
 }
 
+
 function showAllProducts() {
+    console.log('📦 Mostrando todos los productos');
     currentCategory = null;
     activeSubcategoryFilters = [];
     priceRange = { min: 0, max: Infinity };
-    displayProducts(products, "Todos los Productos");
-    showToast('info', 'Mostrando todos los productos');
+    
+    const section = document.getElementById('products-section');
+    const sectionTitle = document.getElementById('products-section-title');
+    
+    if (section) section.style.display = 'block';
+    if (sectionTitle) sectionTitle.textContent = "Todos los Productos";
+    
+    currentProducts = products;
+    currentPage = 1;
+    
+    // Renderizar directamente
+    const productsContainer = document.getElementById('products-container');
+    if (productsContainer) {
+        productsContainer.innerHTML = `
+            <div class="products-content" style="width: 100%;">
+                <div class="products-header">
+                    <div class="d-flex align-items-center">
+                        <span class="me-2 text-muted" id="products-count">Mostrando 0 productos</span>
+                        <div class="form-group mb-0 ms-3">
+                            <select class="form-select form-select-sm" id="products-per-page">
+                                <option value="8">8 por página</option>
+                                <option value="12">12 por página</option>
+                                <option value="16">16 por página</option>
+                                <option value="20">20 por página</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="products-grid" id="filtered-products-container"></div>
+                
+                <!-- Paginación -->
+                <div class="row mt-5">
+                    <div class="col-12">
+                        <nav aria-label="Paginación de productos">
+                            <ul class="pagination justify-content-center" id="products-pagination"></ul>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        setupPagination();
+        renderCurrentPage();
+    }
+    
+    // Desplazarse a la sección
+    setTimeout(() => {
+        scrollToProductsSection();
+    }, 300);
 }
-
+function setupPagination() {
+    const perPageSelect = document.getElementById('products-per-page');
+    if (perPageSelect) {
+        perPageSelect.addEventListener('change', function (e) {
+            productsPerPage = parseInt(e.target.value);
+            currentPage = 1;
+            renderCurrentPage();
+            
+            // Hacer scroll a la sección de productos
+            setTimeout(() => {
+                const productsSection = document.getElementById('products-section');
+                if (productsSection) {
+                    const headerOffset = 120;
+                    const elementPosition = productsSection.getBoundingClientRect().top;
+                    const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+                    
+                    window.scrollTo({
+                        top: offsetPosition,
+                        behavior: 'smooth'
+                    });
+                }
+            }, 100);
+        });
+    }
+}
 function scrollToProductsSection() {
     const productsSection = document.getElementById('products-section');
     if (productsSection) {
@@ -1516,7 +1717,7 @@ function renderPaginationControls() {
 
     paginationHTML += `
         <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
-            <a class="page-link" href="#" onclick="changePage(${currentPage - 1})" aria-label="Anterior">
+            <a class="page-link" href="javascript:void(0);" onclick="changePage(${currentPage - 1})" aria-label="Anterior">
                 <span aria-hidden="true">&laquo;</span>
             </a>
         </li>
@@ -1533,14 +1734,14 @@ function renderPaginationControls() {
     for (let i = startPage; i <= endPage; i++) {
         paginationHTML += `
             <li class="page-item ${currentPage === i ? 'active' : ''}">
-                <a class="page-link" href="#" onclick="changePage(${i})">${i}</a>
+                <a class="page-link" href="javascript:void(0);" onclick="changePage(${i})">${i}</a>
             </li>
         `;
     }
 
     paginationHTML += `
         <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
-            <a class="page-link" href="#" onclick="changePage(${currentPage + 1})" aria-label="Siguiente">
+            <a class="page-link" href="javascript:void(0);" onclick="changePage(${currentPage + 1})" aria-label="Siguiente">
                 <span aria-hidden="true">&raquo;</span>
             </a>
         </li>
@@ -1555,30 +1756,46 @@ function changePage(page) {
     currentPage = page;
     renderCurrentPage();
 
-    setTimeout(() => {
-        const productsSection = document.getElementById('products-section');
-        if (productsSection) {
-            const subcategoriesFilters = productsSection.querySelector('.subcategories-filters');
-            const productsHeader = productsSection.querySelector('.products-header');
+    // Obtener la sección de productos
+    const productsSection = document.getElementById('products-section');
+    if (!productsSection) {
+        console.warn('No se encontró la sección de productos');
+        return;
+    }
 
-            if (subcategoriesFilters) {
-                subcategoriesFilters.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'start'
-                });
-            } else if (productsHeader) {
-                productsHeader.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'start'
-                });
-            } else {
-                productsSection.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'start'
-                });
-            }
+    // Desplazar a la sección de productos de forma suave
+    setTimeout(() => {
+        const productsHeader = document.querySelector('.products-header');
+        const subcategoriesFilters = document.querySelector('.subcategories-filters');
+        const productsContainer = document.getElementById('products-container');
+        
+        // Intentar encontrar el elemento más adecuado para hacer scroll
+        let scrollTarget = productsHeader;
+        
+        if (!scrollTarget && subcategoriesFilters) {
+            scrollTarget = subcategoriesFilters;
         }
-    }, 150);
+        
+        if (!scrollTarget && productsContainer) {
+            scrollTarget = productsContainer;
+        }
+        
+        if (!scrollTarget) {
+            scrollTarget = productsSection;
+        }
+        
+        if (scrollTarget) {
+            // Calcular posición exacta
+            const headerOffset = 120; // Compensar por header fijo
+            const elementPosition = scrollTarget.getBoundingClientRect().top;
+            const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+            
+            window.scrollTo({
+                top: offsetPosition,
+                behavior: 'smooth'
+            });
+        }
+    }, 100);
 }
 
 // ============================================
@@ -1622,10 +1839,10 @@ function showProductDetail(productId) {
 
     showModal('productDetail');
     // Cargar productos relacionados DESPUÉS de mostrar el modal
-    setTimeout(() => {
-        setupModernZoom();
-        loadRelatedProducts(product); // ← ¡NUEVA LÍNEA!
-    }, 100);
+setTimeout(() => {
+    initializeEnhancedZoom();
+    loadRelatedProducts(product);
+}, 100);
 }
 
 function setupProductImages() {
@@ -1711,6 +1928,21 @@ function setupProductImages() {
         setupTouchGestures();
         setupMobileSlider();
     }, 100);
+}
+// Inicialización mejorada
+function initializeEnhancedZoom() {
+    if (window.innerWidth <= 768) {
+        setupMobileTouchSlider();
+        setupEnhancedTouchGestures();
+        
+        // Ocultar elementos de desktop en móviles
+        const zoomLens = document.getElementById('zoomLens');
+        const zoomWindow = document.getElementById('zoomWindow');
+        if (zoomLens) zoomLens.style.display = 'none';
+        if (zoomWindow) zoomWindow.style.display = 'none';
+    } else {
+        setupDesktopZoom();
+    }
 }
 
 function setupProductSpecifications(product) {
@@ -1914,6 +2146,10 @@ function setupDesktopZoom(wrapper, image, lens, zoomWindow, zoomWindowImage) {
     });
 }
 
+// ============================================
+// FUNCIONES MEJORADAS PARA ZOOM EN MÓVILES
+// ============================================
+
 function setupMobileTouchSlider() {
     const container = document.getElementById('touchSliderContainer');
     const track = document.getElementById('touchSliderTrack');
@@ -1922,66 +2158,106 @@ function setupMobileTouchSlider() {
     if (!container || !track || !currentProductImages) return;
 
     track.innerHTML = '';
-    dotsContainer.innerHTML = '';
+    if (dotsContainer) dotsContainer.innerHTML = '';
 
+    // Crear slides y dots
     currentProductImages.forEach((imgSrc, index) => {
+        // Crear slide
         const slide = document.createElement('div');
         slide.className = 'touch-slide';
         slide.dataset.index = index;
 
         const img = document.createElement('img');
         img.src = imgSrc;
-        img.alt = `Imagen ${index + 1}`;
+        img.alt = `Imagen ${index + 1} de ${currentProductDetail?.name || 'producto'}`;
+        img.loading = 'lazy';
         img.onerror = () => {
-            img.src = getDefaultImage(currentProductDetail.name);
+            img.src = getDefaultImage(currentProductDetail?.name || 'Producto');
         };
 
         slide.appendChild(img);
         track.appendChild(slide);
 
-        const dot = document.createElement('div');
-        dot.className = `touch-slider-dot ${index === 0 ? 'active' : ''}`;
-        dot.dataset.index = index;
-        dot.onclick = () => goToSlide(index);
-        dotsContainer.appendChild(dot);
+        // Crear dot si existe el contenedor
+        if (dotsContainer) {
+            const dot = document.createElement('div');
+            dot.className = `touch-slider-dot ${index === 0 ? 'active' : ''}`;
+            dot.dataset.index = index;
+            dot.onclick = (e) => {
+                e.stopPropagation();
+                goToSlide(index);
+            };
+            dotsContainer.appendChild(dot);
+        }
     });
 
+    // Configurar dimensiones del track
+    track.style.width = `${currentProductImages.length * 100}%`;
+    
     let startX = 0;
     let currentTranslate = 0;
     let prevTranslate = 0;
-    let isDraggingSlider = false;
+    let isDragging = false;
     let animationID;
+    let velocity = 0;
+    let lastTime = 0;
 
+    // Función para animación suave
+    function animate() {
+        if (Math.abs(velocity) > 0.1) {
+            currentTranslate += velocity;
+            velocity *= 0.95; // Fricción
+            track.style.transform = `translateX(${currentTranslate}px)`;
+            animationID = requestAnimationFrame(animate);
+        }
+    }
+
+    // Eventos táctiles
     track.addEventListener('touchstart', (e) => {
         startX = e.touches[0].clientX;
-        isDraggingSlider = true;
+        isDragging = true;
         track.style.transition = 'none';
         cancelAnimationFrame(animationID);
-    });
+        velocity = 0;
+        lastTime = Date.now();
+    }, { passive: true });
 
     track.addEventListener('touchmove', (e) => {
-        if (!isDraggingSlider) return;
+        if (!isDragging) return;
         e.preventDefault();
 
         const currentX = e.touches[0].clientX;
         const diff = currentX - startX;
         currentTranslate = prevTranslate + diff;
 
+        // Calcular velocidad para deslizamiento inercial
+        const currentTime = Date.now();
+        const deltaTime = currentTime - lastTime;
+        if (deltaTime > 0) {
+            velocity = (currentTranslate - prevTranslate) / deltaTime * 16;
+        }
+        lastTime = currentTime;
+
+        // Limitar desplazamiento
+        const maxTranslate = 0;
+        const minTranslate = -(track.scrollWidth - container.clientWidth);
+        currentTranslate = Math.max(minTranslate, Math.min(maxTranslate, currentTranslate));
+
         track.style.transform = `translateX(${currentTranslate}px)`;
-    });
+    }, { passive: false });
 
     track.addEventListener('touchend', () => {
-        if (!isDraggingSlider) return;
-        isDraggingSlider = false;
-        track.style.transition = 'transform 0.3s ease';
-
-        const movedBy = currentTranslate - prevTranslate;
+        if (!isDragging) return;
+        isDragging = false;
+        
         const slideWidth = container.clientWidth;
+        const movedBy = currentTranslate - prevTranslate;
 
-        if (Math.abs(movedBy) > slideWidth * 0.2) {
-            if (movedBy > 0 && currentImageIndex > 0) {
+        // Determinar si hay que cambiar de slide
+        if (Math.abs(movedBy) > slideWidth * 0.15 || Math.abs(velocity) > 0.5) {
+            if ((movedBy > 0 || velocity > 0) && currentImageIndex > 0) {
                 goToSlide(currentImageIndex - 1);
-            } else if (movedBy < 0 && currentImageIndex < currentProductImages.length - 1) {
+            } else if ((movedBy < 0 || velocity < 0) && currentImageIndex < currentProductImages.length - 1) {
                 goToSlide(currentImageIndex + 1);
             } else {
                 goToSlide(currentImageIndex);
@@ -1990,21 +2266,122 @@ function setupMobileTouchSlider() {
             goToSlide(currentImageIndex);
         }
 
-        prevTranslate = -currentImageIndex * slideWidth;
-        currentTranslate = prevTranslate;
-        track.style.transform = `translateX(${prevTranslate}px)`;
+        // Iniciar animación inercial si hay velocidad
+        if (Math.abs(velocity) > 0.1) {
+            animationID = requestAnimationFrame(animate);
+        }
     });
 
+    // Doble tap para zoom completo
     let lastTap = 0;
     track.addEventListener('touchend', (e) => {
         const currentTime = new Date().getTime();
         const tapLength = currentTime - lastTap;
 
         if (tapLength < 300 && tapLength > 0) {
+            e.preventDefault();
             openFullscreenZoom(currentImageIndex);
         }
         lastTap = currentTime;
     });
+
+    // Inicializar
+    goToSlide(0);
+}
+
+function setupEnhancedTouchGestures() {
+    const container = document.getElementById('imageZoomWrapper');
+    if (!container) return;
+
+    let initialDistance = 0;
+    let initialScale = 1;
+    let isPinching = false;
+    let lastTouchEnd = 0;
+
+    // Detectar pellizco para zoom
+    container.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 2) {
+            e.preventDefault();
+            isPinching = true;
+            initialDistance = getTouchDistance(e.touches[0], e.touches[1]);
+            initialScale = zoomScale;
+        }
+    }, { passive: false });
+
+    container.addEventListener('touchmove', (e) => {
+        if (e.touches.length === 2 && isPinching) {
+            e.preventDefault();
+            
+            const currentDistance = getTouchDistance(e.touches[0], e.touches[1]);
+            const scale = currentDistance / initialDistance;
+            
+            // Aplicar zoom con límites
+            zoomScale = Math.max(minZoom, Math.min(maxZoom, initialScale * scale));
+            
+            const image = document.getElementById('detailMainImage');
+            if (image) {
+                image.style.transform = `scale(${zoomScale})`;
+                
+                // Centrar el zoom en el punto medio de los dedos
+                const midpoint = getTouchMidpoint(e.touches[0], e.touches[1]);
+                const rect = container.getBoundingClientRect();
+                const x = (midpoint.x - rect.left) / rect.width * 100;
+                const y = (midpoint.y - rect.top) / rect.height * 100;
+                image.style.transformOrigin = `${x}% ${y}%`;
+            }
+        }
+    }, { passive: false });
+
+    container.addEventListener('touchend', () => {
+        isPinching = false;
+        
+        // Resetear si el zoom es muy pequeño
+        if (zoomScale < minZoom + 0.1) {
+            zoomScale = minZoom;
+            const image = document.getElementById('detailMainImage');
+            if (image) {
+                image.style.transform = `scale(${zoomScale})`;
+                image.style.transformOrigin = 'center center';
+            }
+        }
+    });
+
+    // Funciones auxiliares
+    function getTouchDistance(touch1, touch2) {
+        const dx = touch1.clientX - touch2.clientX;
+        const dy = touch1.clientY - touch2.clientY;
+        return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    function getTouchMidpoint(touch1, touch2) {
+        return {
+            x: (touch1.clientX + touch2.clientX) / 2,
+            y: (touch1.clientY + touch2.clientY) / 2
+        };
+    }
+
+    // Feedback visual para gestos
+    container.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 1) {
+            showTouchFeedback(e.touches[0].clientX, e.touches[0].clientY);
+        }
+    });
+}
+function showTouchFeedback(x, y) {
+    let feedback = document.querySelector('.touch-feedback');
+    if (!feedback) {
+        feedback = document.createElement('div');
+        feedback.className = 'touch-feedback';
+        document.body.appendChild(feedback);
+    }
+    
+    feedback.style.left = `${x - 30}px`;
+    feedback.style.top = `${y - 30}px`;
+    feedback.style.display = 'block';
+    
+    setTimeout(() => {
+        feedback.style.display = 'none';
+    }, 500);
 }
 
 function goToSlide(index) {
@@ -2059,13 +2436,17 @@ function closeFullscreenZoom() {
     translateY = 0;
 }
 
+
+// Mejorar la función de zoom completo para móviles
 function setupFullscreenGestures(content, image) {
     let isDragging = false;
     let startX, startY;
+    let startTouches = [];
     let touchStartDistance = 0;
     let currentScale = 1;
-    let startTouches = [];
+    let lastTapTime = 0;
 
+    // Zoom con pellizco
     content.addEventListener('touchstart', (e) => {
         if (e.touches.length === 1) {
             isDragging = true;
@@ -2077,7 +2458,7 @@ function setupFullscreenGestures(content, image) {
             touchStartDistance = getDistance(startTouches[0], startTouches[1]);
             currentScale = zoomScale;
         }
-    });
+    }, { passive: true });
 
     content.addEventListener('touchmove', (e) => {
         e.preventDefault();
@@ -2086,6 +2467,7 @@ function setupFullscreenGestures(content, image) {
             const x = e.touches[0].clientX - startX;
             const y = e.touches[0].clientY - startY;
 
+            // Limitar el desplazamiento según el nivel de zoom
             const limitX = (image.clientWidth * (zoomScale - 1)) / 2;
             const limitY = (image.clientHeight * (zoomScale - 1)) / 2;
 
@@ -2101,21 +2483,61 @@ function setupFullscreenGestures(content, image) {
             if (touchStartDistance > 0) {
                 const scale = currentDistance / touchStartDistance;
                 zoomScale = Math.max(minZoom, Math.min(maxZoom, currentScale * scale));
+                
+                // Ajustar la posición para mantener el punto entre dedos centrado
+                const midPoint = getTouchMidpoint(touch1, touch2);
+                const rect = content.getBoundingClientRect();
+                const relativeX = midPoint.x - rect.left;
+                const relativeY = midPoint.y - rect.top;
+                
+                image.style.transformOrigin = `${relativeX}px ${relativeY}px`;
                 image.style.transform = `translate(${translateX}px, ${translateY}px) scale(${zoomScale})`;
             }
         }
-    });
+    }, { passive: false });
 
+    // Doble tap para resetear zoom
     content.addEventListener('touchend', (e) => {
         isDragging = false;
         startTouches = [];
         touchStartDistance = 0;
 
-        if (e.changedTouches.length === 1) {
+        // Detectar doble tap
+        const currentTime = new Date().getTime();
+        if (currentTime - lastTapTime < 300) {
+            e.preventDefault();
+            
+            if (zoomScale > minZoom) {
+                // Resetear zoom
+                zoomScale = minZoom;
+                translateX = 0;
+                translateY = 0;
+                image.style.transform = `translate(0px, 0px) scale(1)`;
+                image.style.transformOrigin = 'center center';
+            } else {
+                // Zoom al punto del tap
+                if (e.changedTouches.length === 1) {
+                    const touch = e.changedTouches[0];
+                    const rect = content.getBoundingClientRect();
+                    const x = touch.clientX - rect.left;
+                    const y = touch.clientY - rect.top;
+                    
+                    zoomScale = maxZoom;
+                    image.style.transformOrigin = `${x}px ${y}px`;
+                    image.style.transform = `translate(0px, 0px) scale(${zoomScale})`;
+                }
+            }
+        }
+        lastTapTime = currentTime;
+    });
+
+    // Swipe para cambiar imagen
+    content.addEventListener('touchend', (e) => {
+        if (e.changedTouches.length === 1 && !isDragging) {
             const touch = e.changedTouches[0];
             const deltaX = touch.clientX - startX;
-
-            if (Math.abs(deltaX) > 50) {
+            
+            if (Math.abs(deltaX) > 50 && zoomScale <= minZoom + 0.1) {
                 if (deltaX > 0) {
                     changeFullscreenImage(-1);
                 } else {
@@ -2124,63 +2546,7 @@ function setupFullscreenGestures(content, image) {
             }
         }
     });
-
-    content.addEventListener('mousedown', (e) => {
-        isDragging = true;
-        startX = e.clientX - translateX;
-        startY = e.clientY - translateY;
-    });
-
-    content.addEventListener('mousemove', (e) => {
-        if (!isDragging) return;
-
-        const x = e.clientX - startX;
-        const y = e.clientY - startY;
-
-        const limitX = (image.clientWidth * (zoomScale - 1)) / 2;
-        const limitY = (image.clientHeight * (zoomScale - 1)) / 2;
-
-        translateX = Math.max(-limitX, Math.min(limitX, x));
-        translateY = Math.max(-limitY, Math.min(limitY, y));
-
-        image.style.transform = `translate(${translateX}px, ${translateY}px) scale(${zoomScale})`;
-    });
-
-    content.addEventListener('mouseup', () => {
-        isDragging = false;
-    });
-
-    content.addEventListener('mouseleave', () => {
-        isDragging = false;
-    });
-
-    content.addEventListener('wheel', (e) => {
-        e.preventDefault();
-
-        const delta = e.deltaY > 0 ? -0.1 : 0.1;
-        const oldScale = zoomScale;
-        zoomScale = Math.max(minZoom, Math.min(maxZoom, zoomScale + delta));
-
-        const rect = content.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-
-        const scaleChange = zoomScale / oldScale;
-        translateX = x - (x - translateX) * scaleChange;
-        translateY = y - (y - translateY) * scaleChange;
-
-        image.style.transform = `translate(${translateX}px, ${translateY}px) scale(${zoomScale})`;
-    });
-
-    content.addEventListener('dblclick', (e) => {
-        e.preventDefault();
-        zoomScale = 1;
-        translateX = 0;
-        translateY = 0;
-        image.style.transform = `translate(${translateX}px, ${translateY}px) scale(${zoomScale})`;
-    });
 }
-
 function changeFullscreenImage(direction) {
     const newIndex = currentImageIndex + direction;
 
@@ -2396,30 +2762,40 @@ function changeProductImage(direction) {
     changeToImage(currentImageIndex);
 }
 
+// Optimizar cambio de imágenes
 function changeToImage(index) {
     if (index < 0 || index >= currentProductImages.length) return;
 
     currentImageIndex = index;
 
     const mainImage = document.getElementById('detailMainImage');
-    if (mainImage) {
-        mainImage.src = currentProductImages[index];
-    }
-
     const zoomWindowImage = document.getElementById('zoomWindowImage');
-    if (zoomWindowImage) {
-        zoomWindowImage.src = currentProductImages[index];
-    }
+    const fullscreenImage = document.getElementById('fullscreenZoomImage');
+
+    // Precargar imagen
+    const img = new Image();
+    img.src = currentProductImages[index];
+    img.onload = () => {
+        if (mainImage) mainImage.src = currentProductImages[index];
+        if (zoomWindowImage) zoomWindowImage.src = currentProductImages[index];
+        if (fullscreenImage) fullscreenImage.src = currentProductImages[index];
+    };
+    img.onerror = () => {
+        const defaultImg = getDefaultImage(currentProductDetail?.name || 'Producto');
+        if (mainImage) mainImage.src = defaultImg;
+        if (zoomWindowImage) zoomWindowImage.src = defaultImg;
+        if (fullscreenImage) fullscreenImage.src = defaultImg;
+    };
 
     goToSlide(index);
 
+    // Actualizar miniaturas
     document.querySelectorAll('.thumbnail').forEach((thumb, i) => {
         thumb.classList.toggle('active', i === index);
     });
 
     updateImageCounters();
 }
-
 function resetImageZoom() {
     const lens = document.getElementById('zoomLens');
     const zoomWindow = document.getElementById('zoomWindow');
@@ -4627,7 +5003,7 @@ function loadUserOrdersWithPagination(page = 1) {
             userOrdersList.innerHTML = `
                 <div class="text-center text-muted py-3">
                     <i class="fas fa-box-open"></i>
-                    
+                   
                 </div>
             `;
             return;
@@ -5103,15 +5479,30 @@ function setupEventListeners() {
             if (e.key === 'Enter') performSearch();
         });
         searchInput.addEventListener('input', function () {
-            if (this.value.trim() === '') showAllProducts();
+            if (this.value.trim() === '') goToCatalogHome();
         });
     }
 
+    // Enlaces de inicio
+    const navInicioLinks = document.querySelectorAll('a[href="#inicio"], .nav-link[href="#"]');
+    navInicioLinks.forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            goToCatalogHome();
+            
+            // Cerrar menú móvil si está abierto
+            if (window.innerWidth <= 768) {
+                const mobileNav = document.getElementById('mobileNavContainer');
+                if (mobileNav && mobileNav.classList.contains('active')) {
+                    mobileNav.classList.remove('active');
+                    document.body.classList.remove('menu-open');
+                }
+            }
+        });
+    });
+
     setupPagination();
-
-    const cartLink = document.getElementById('cartLink');
-    if (cartLink) cartLink.addEventListener('click', renderCart);
-
+    setupCartEvents();
     setupFormEvents();
     setupCheckoutEvents();
 
@@ -5121,7 +5512,10 @@ function setupEventListeners() {
             setTimeout(setupImageZoom, 100);
         }
     });
-
+}
+function setupCartEvents() {
+    const cartLink = document.getElementById('cartLink');
+    if (cartLink) cartLink.addEventListener('click', renderCart);
 }
 
 function setupFormEvents() {
@@ -5881,3 +6275,41 @@ window.updateMobileCartBadge = function(count) {
         mobileCartBadge.textContent = count;
     }
 };
+
+
+// En tu app.js existente, agrega:
+document.addEventListener('DOMContentLoaded', function() {
+    // Detectar touch device
+    const isTouchDevice = 'ontouchstart' in window || 
+                         navigator.maxTouchPoints > 0 || 
+                         navigator.msMaxTouchPoints > 0;
+    
+    if (isTouchDevice) {
+        // Optimizar para touch
+        optimizeForTouch();
+    }
+    
+    // Inicializar filtros responsive
+    if (typeof setupResponsiveFilters === 'function') {
+        setupResponsiveFilters();
+    }
+});
+
+function optimizeForTouch() {
+    // Aumentar áreas táctiles
+    document.querySelectorAll('.mobile-dropdown-link, .dropdown-item').forEach(item => {
+        item.style.padding = '12px 15px';
+        item.style.minHeight = '44px'; // Tamaño mínimo recomendado para touch
+    });
+    
+    // Mejorar feedback táctil
+    document.querySelectorAll('.category-card, .carousel-slide').forEach(element => {
+        element.addEventListener('touchstart', function() {
+            this.style.opacity = '0.8';
+        });
+        
+        element.addEventListener('touchend', function() {
+            this.style.opacity = '1';
+        });
+    });
+}
