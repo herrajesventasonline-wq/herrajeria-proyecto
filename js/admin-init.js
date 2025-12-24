@@ -228,20 +228,31 @@ function showConfirmation(options = {}) {
 }
 
 function hideConfirmation() {
+    console.log('🔴 Cerrando modal de confirmación...');
+    
     const modal = document.getElementById('confirmation-modal');
     const overlay = document.getElementById('overlay');
-
+    
     if (modal) {
         modal.style.display = 'none';
         modal.classList.remove('active');
     }
-
+    
     if (overlay) {
         overlay.style.display = 'none';
     }
-
+    
     document.body.style.overflow = '';
+    document.body.style.position = '';
+    document.body.style.width = '';
+    
+    // Resolver promesa si existe
+    if (confirmationResolve) {
+        confirmationResolve(false);
+        confirmationResolve = null;
+    }
 }
+
 
 function setupConfirmationModal() {
     const modal = document.getElementById('confirmation-modal');
@@ -571,54 +582,34 @@ function showLoadingState(show) {
 function setupAdminEventListeners() {
     try {
         console.log('🔧 Configurando event listeners...');
-
+        
         // Pestañas del panel
         document.querySelectorAll('.admin-tab').forEach(tab => {
             tab.addEventListener('click', switchAdminTab);
         });
-
+        
         // Botones principales
         document.getElementById('add-product-btn')?.addEventListener('click', () => showProductModal(false));
         document.getElementById('logout-btn')?.addEventListener('click', logout);
-        document.getElementById('price-adjustment-btn-2')?.addEventListener('click', () => showPriceAdjustmentModal());
-
+        document.getElementById('price-adjustment-btn-2')?.addEventListener('click', showPriceAdjustmentModal);
+        
         // Búsquedas
         const productSearch = document.getElementById('product-search');
         if (productSearch) {
             productSearch.addEventListener('input', debounce(filterProducts, 300));
         }
-
+        
         // Configurar filtro de fechas para pedidos
         setupDateFilter();
-
-        // Cerrar modales
-        // Configurar cierre específico del modal de factura
-        const invoiceModal = document.getElementById('invoice-modal');
-        if (invoiceModal) {
-            // Botón de cerrar (X)
-            const closeBtn = invoiceModal.querySelector('.close-modal');
-            if (closeBtn) {
-                closeBtn.addEventListener('click', () => {
-                    console.log('❌ Botón X clickeado');
-                    hideInvoiceModal();
-                });
-            }
-
-            // Cerrar con el overlay específico de este modal
-            invoiceModal.addEventListener('click', (e) => {
-                if (e.target === invoiceModal) {
-                    console.log('🎯 Click en overlay del modal');
-                    hideInvoiceModal();
-                }
-            });
-        }
-
-        setupConfirmationModal();
+        
+        // Configurar cierre de modales - AGREGAR ESTA LÍNEA
+        setupModalCloseListeners();
+        
+        // Configurar sistema de facturas
         setupInvoiceActions();
-
+        
         console.log('✅ Event listeners configurados correctamente');
-
-
+        
     } catch (error) {
         console.error('❌ Error configurando event listeners:', error);
     }
@@ -1254,30 +1245,44 @@ function showProductModal(isEditing = false) {
 }
 
 function hideProductModal() {
+    console.log('🔴 Cerrando modal de producto...');
+    
     const modal = document.getElementById('product-modal');
     const overlay = document.getElementById('overlay');
-
-    if (modal) modal.classList.remove('active');
-    if (overlay) overlay.style.display = 'none';
-    document.body.style.overflow = '';
-}
-
-function hideInvoiceModal() {
-    console.log('🔴 Cerrando modal de factura...');
-
-    const modal = document.getElementById('invoice-modal');
-    const overlay = document.getElementById('overlay');
-
+    
     if (modal) {
         modal.style.display = 'none';
         modal.classList.remove('active');
-        console.log('✅ Modal ocultado');
     }
-
+    
     if (overlay) {
         overlay.style.display = 'none';
     }
+    
+    document.body.style.overflow = '';
+    document.body.style.position = '';
+    document.body.style.width = '';
+    
+    // Resetear formulario
+    resetProductForm();
+}
 
+
+function hideInvoiceModal() {
+    console.log('🔴 Cerrando modal de factura...');
+    
+    const modal = document.getElementById('invoice-modal');
+    const overlay = document.getElementById('overlay');
+    
+    if (modal) {
+        modal.style.display = 'none';
+        modal.classList.remove('active');
+    }
+    
+    if (overlay) {
+        overlay.style.display = 'none';
+    }
+    
     document.body.style.overflow = '';
     document.body.style.position = '';
     document.body.style.width = '';
@@ -1285,22 +1290,80 @@ function hideInvoiceModal() {
 
 
 
+// ==============================================
+// FUNCIÓN PARA OCULTAR MODAL DE AJUSTE DE PRECIOS
+// ==============================================
 
 function hidePriceAdjustmentModal() {
+    console.log('🔴 Cerrando modal de ajuste de precios...');
+    
     const modal = document.getElementById('price-adjustment-modal');
     const overlay = document.getElementById('overlay');
-
-    if (modal) modal.classList.remove('active');
-    if (overlay) overlay.style.display = 'none';
+    
+    if (modal) {
+        modal.style.display = 'none';
+        modal.classList.remove('active');
+    }
+    
+    if (overlay) {
+        overlay.style.display = 'none';
+    }
+    
     document.body.style.overflow = '';
+    document.body.style.position = '';
+    document.body.style.width = '';
+    
+    // Resetear formulario de ajuste de precios
+    const form = document.getElementById('price-adjustment-form');
+    if (form) {
+        form.reset();
+    }
+}
+
+// Función para mostrar modal de ajuste de precios
+function showPriceAdjustmentModal() {
+    console.log('🚀 Mostrando modal de ajuste de precios...');
+    showModal('price-adjustment-modal');
 }
 
 // También mejora la función closeAllModals:
+// Función para cerrar todos los modales activos
 function closeAllModals() {
-    console.log('🔴 Cerrando todos los modales...');
-    hideProductModal();
-    hideInvoiceModal();
-    hidePriceAdjustmentModal();
+    console.log('🔴 Cerrando todos los modales activos...');
+    
+    // Lista de todas las funciones de cierre de modales
+    const closeFunctions = [
+        hideProductModal,
+        hidePriceAdjustmentModal,
+        hideConfirmation,
+        hideInvoiceModal
+    ];
+    
+    // Ejecutar todas las funciones de cierre
+    closeFunctions.forEach(func => {
+        try {
+            func();
+        } catch (error) {
+            console.warn('⚠️ Error al cerrar modal:', error.message);
+        }
+    });
+    
+    // También cerrar cualquier modal genérico que pueda estar abierto
+    document.querySelectorAll('.modal.active').forEach(modal => {
+        modal.style.display = 'none';
+        modal.classList.remove('active');
+    });
+    
+    // Ocultar overlay
+    const overlay = document.getElementById('overlay');
+    if (overlay) {
+        overlay.style.display = 'none';
+    }
+    
+    // Restaurar scroll del body
+    document.body.style.overflow = '';
+    document.body.style.position = '';
+    document.body.style.width = '';
 }
 
 function resetProductForm() {
@@ -4009,6 +4072,83 @@ function setupPrintStyles() {
     // Agregar estilos al documento
     document.head.insertAdjacentHTML('beforeend', printStyles);
 }
+
+
+// ==============================================
+// FUNCIONES PARA CERRAR MODALES
+// ==============================================
+
+function setupModalCloseListeners() {
+    console.log('🔧 Configurando listeners para cerrar modales...');
+    
+    // 1. Configurar botones .close-modal para cada modal
+    document.querySelectorAll('.close-modal').forEach(button => {
+        button.addEventListener('click', function() {
+            const modal = this.closest('.modal');
+            if (modal) {
+                const modalId = modal.id;
+                console.log('❌ Cerrar modal clickeado para:', modalId);
+                
+                switch(modalId) {
+                    case 'product-modal':
+                        hideProductModal();
+                        break;
+                    case 'price-adjustment-modal':
+                        hidePriceAdjustmentModal();
+                        break;
+                    case 'confirmation-modal':
+                        hideConfirmation();
+                        break;
+                    case 'invoice-modal':
+                        hideInvoiceModal();
+                        break;
+                    default:
+                        // Cerrar cualquier modal genérico
+                        modal.style.display = 'none';
+                        modal.classList.remove('active');
+                        document.getElementById('overlay').style.display = 'none';
+                        document.body.style.overflow = '';
+                }
+            }
+        });
+    });
+    
+    // 2. Configurar botones .btn-cancel específicos
+    const cancelButtons = [
+        { id: 'cancel-product', action: hideProductModal },
+        { id: 'cancel-adjustment', action: hidePriceAdjustmentModal },
+        { id: 'confirmation-cancel', action: hideConfirmation }
+    ];
+    
+    cancelButtons.forEach(btn => {
+        const button = document.getElementById(btn.id);
+        if (button) {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                console.log('❌ Botón cancelar clickeado:', btn.id);
+                btn.action();
+            });
+        }
+    });
+    
+    // 3. Configurar overlay para cerrar modales
+    const overlay = document.getElementById('overlay');
+    if (overlay) {
+        overlay.addEventListener('click', function() {
+            console.log('🎯 Overlay clickeado, cerrando modales...');
+            closeAllModals();
+        });
+    }
+    
+    // 4. Configurar tecla ESC para cerrar modales
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            console.log('⎋ Tecla ESC presionada');
+            closeAllModals();
+        }
+    });
+}
+
 
 // Al final del archivo, antes del último console.log
 function addIVAIncludedStyles() {
