@@ -1082,7 +1082,6 @@ function displayProductsPage(productsToDisplay) {
 
 // ============================================
 // FUNCIONES DE BÚSQUEDA Y CATEGORÍAS
-// ============================================
 function performSearch() {
     const searchInput = document.getElementById('searchInput');
     const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : '';
@@ -1105,28 +1104,18 @@ function performSearch() {
     );
 
     if (filteredProducts.length === 0) {
-        // Usar el mismo layout que el catálogo
         displayFilteredProductsWithFilters([], `Búsqueda: "${searchTerm}"`);
         showToast('error', `No se encontraron productos para "${searchTerm}"`);
     } else {
-        // Mostrar con el layout de filtros pero sin filtros activos
         currentCategory = null;
         activeSubcategoryFilters = [];
         priceRange = { min: 0, max: Infinity };
         
-        // Crear un layout similar al de categorías
         const section = document.getElementById('products-section');
         const sectionTitle = document.getElementById('products-section-title');
-        const showAllBtn = document.getElementById('show-all-btn');
         
         if (section) section.style.display = 'block';
         if (sectionTitle) sectionTitle.textContent = `Resultados de búsqueda: "${searchTerm}" (${filteredProducts.length} productos)`;
-        
-        if (showAllBtn) {
-            showAllBtn.style.display = 'block';
-            showAllBtn.innerHTML = '<i class="fas fa-times me-2"></i>Limpiar búsqueda';
-            showAllBtn.onclick = showAllProducts;
-        }
         
         currentProducts = filteredProducts;
         currentPage = 1;
@@ -1139,14 +1128,6 @@ function performSearch() {
                     <div class="products-header">
                         <div class="d-flex align-items-center">
                             <span class="me-2 text-muted" id="products-count">Mostrando 0 productos</span>
-                            <div class="form-group mb-0 ms-3">
-                                <select class="form-select form-select-sm" id="products-per-page">
-                                    <option value="8">8 por página</option>
-                                    <option value="12">12 por página</option>
-                                    <option value="16">16 por página</option>
-                                    <option value="20">20 por página</option>
-                                </select>
-                            </div>
                         </div>
                     </div>
                     <div class="products-grid" id="filtered-products-container"></div>
@@ -1168,8 +1149,10 @@ function performSearch() {
         
         showToast('success', `Se encontraron ${filteredProducts.length} productos para "${searchTerm}"`);
         
-        // Scroll a la sección
-        scrollToProductsSection();
+        // Desplazarse a la sección
+        setTimeout(() => {
+            scrollToProductsSection();
+        }, 300);
     }
 }
 // ============================================
@@ -1211,8 +1194,7 @@ function resetCatalogToHome() {
         behavior: 'smooth'
     });
     
-    // Mostrar mensaje
-    showToast('info', 'Volviendo al inicio del catálogo');
+  
 }
 // ============================================
 // FUNCIÓN PARA IR AL INICIO DEL CATÁLOGO
@@ -1247,10 +1229,18 @@ function goToCatalogHome() {
         behavior: 'smooth'
     });
     
-    showToast('info', 'Volviendo al inicio del catálogo');
+    
 }
 function filterByCategory(categoryName) {
     console.log(`Filtrando por categoría: ${categoryName}`);
+
+    // Cerrar menú móvil si está abierto
+    if (typeof closeMobileMenu === 'function') {
+        const mobileNavContainer = document.getElementById('mobileNavContainer');
+        if (mobileNavContainer && mobileNavContainer.classList.contains('active')) {
+            closeMobileMenu();
+        }
+    }
 
     if (products.length === 0) {
         showToast('error', 'Los productos aún se están cargando. Por favor, espera un momento.');
@@ -1270,6 +1260,7 @@ function filterByCategory(categoryName) {
         );
     }
 
+    // Mostrar productos filtrados
     displayFilteredProductsWithFilters(filteredProducts, categoryName);
     
     // Desplazarse a la sección de productos
@@ -1631,27 +1622,38 @@ function setupPagination() {
 }
 function scrollToProductsSection() {
     const productsSection = document.getElementById('products-section');
-    if (productsSection) {
-        const subcategoriesFilters = productsSection.querySelector('.subcategories-filters');
-        const productsHeader = productsSection.querySelector('.products-header');
-
-        if (subcategoriesFilters) {
-            subcategoriesFilters.scrollIntoView({
-                behavior: 'smooth',
-                block: 'start'
-            });
-        } else if (productsHeader) {
-            productsHeader.scrollIntoView({
-                behavior: 'smooth',
-                block: 'start'
-            });
-        } else {
-            productsSection.scrollIntoView({
-                behavior: 'smooth',
-                block: 'start'
-            });
+    if (!productsSection) return;
+    
+    // Asegurarse de que la sección sea visible
+    productsSection.style.display = 'block';
+    
+    // Esperar un momento para que el DOM se actualice
+    setTimeout(() => {
+        const header = document.querySelector('header.header-main');
+        const headerHeight = header ? header.offsetHeight : 120;
+        
+        // Calcular posición considerando el header fijo
+        const elementPosition = productsSection.getBoundingClientRect().top;
+        const offsetPosition = elementPosition + window.pageYOffset - headerHeight;
+        
+        // Desplazamiento suave
+        window.scrollTo({
+            top: offsetPosition,
+            behavior: 'smooth'
+        });
+        
+        // Para dispositivos móviles, enfoque adicional
+        if (window.innerWidth <= 768) {
+            // Enfocar en el título de la sección para mejor UX
+            const sectionTitle = document.getElementById('products-section-title');
+            if (sectionTitle) {
+                sectionTitle.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+            }
         }
-    }
+    }, 100);
 }
 
 // ============================================
@@ -6146,11 +6148,11 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Función para cerrar el menú
-    function closeMobileMenu() {
-        console.log('Close menu clicked'); // Para depuración
-        mobileNavContainer.classList.remove('active');
-        body.classList.remove('menu-open');
-    }
+window.closeMobileMenu = function() {
+    console.log('Close menu clicked');
+    mobileNavContainer.classList.remove('active');
+    body.classList.remove('menu-open');
+};
     
     // Event listeners
     if (mobileMenuToggle) {
