@@ -4901,3 +4901,43 @@ body.menu-open {
         filter: invert(1);
     }
 }
+
+
+
+/* Mejoras para scroll en dispositivos móviles */
+@media (max-width: 768px) {
+    #products-section {
+        scroll-margin-top: 80px; /* Compensa el header fijo */
+    }
+    
+    .products-with-filters {
+        padding-top: 10px;
+    }
+}
+
+/* Estilos para el desplazamiento suave */
+html {
+    scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html {
+        scroll-behavior: auto;
+    }
+}
+
+/* Asegurar que la sección de productos sea visible */
+#products-section {
+    min-height: 500px;
+}
+
+/* Mejorar el enfoque en la sección */
+#products-section:target {
+    animation: highlightSection 1s ease;
+}
+
+@keyframes highlightSection {
+    0% { background-color: transparent; }
+    50% { background-color: rgba(0, 123, 255, 0.05); }
+    100% { background-color: transparent; }
+}
