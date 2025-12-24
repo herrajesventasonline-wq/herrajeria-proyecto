@@ -1076,9 +1076,9 @@ body {
     border-radius: var(--radius);
     box-shadow: var(--shadow);
     border-radius: 0.75rem;
-    padding: 40px;
+    padding: 20px;
     width: 100%;
-    max-width: 400px;
+    max-width: 340px;
 }
 
 .login-form .logo {
