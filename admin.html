@@ -6,13 +6,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Panel de Administración - Herrajería</title>
      <!-- Configuración segura -->
-
+  <script>
+    // Detectar si estamos en desarrollo
+    const isDevelopment = window.location.hostname === 'localhost' || 
+                         window.location.hostname === '127.0.0.1';
     
-<script>
-  // INYECCIÓN TEMPORAL
-  window.SUPABASE_URL = 'https://opueqifkagoonpbubflj.supabase.co';
-  window.SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9wdWVxaWZrYWdvb25wYnViZmxqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMzNDc3OTksImV4cCI6MjA3ODkyMzc5OX0.8ES1VbCKOu79JrMpPNTkUuDZmo9MOHsVZunui4CJYSI';
-  console.log('⚠️ Variables inyectadas directamente en HTML');
+    if (isDevelopment) {
+        console.log('🚀 Modo desarrollo detectado');
+        // En desarrollo, cargamos config.js
+        document.write('<script src="/js/config.js"><\/script>');
+    } else {
+        console.log('🚀 Modo producción');
+        // En producción, Netlify inyectará las variables
+        window.SUPABASE_URL = '{{SUPABASE_URL}}';
+        window.SUPABASE_ANON_KEY = '{{SUPABASE_ANON_KEY}}';
+    }
 </script>
 
     <meta name="description" content="Panel de administración para gestión de productos de herrajería">
@@ -698,7 +706,7 @@
                                     </td>
                                     <td
                                         style="padding: 12px 15px; text-align: right; border-top: 2px solid #e2e8f0; font-weight: 600;">
-                                        $<span id="invoice-subtotal">0.00</span>
+                                        <span id="invoice-subtotal">0.00</span>
                                     </td>
                                 </tr>
                                 <tr>
@@ -706,7 +714,7 @@
                                         <strong>IVA (21%):</strong>
                                     </td>
                                     <td style="padding: 12px 15px; text-align: right; font-weight: 600;">
-                                        $<span id="invoice-tax">0.00</span>
+                                        <span id="invoice-tax">0.00</span>
                                     </td>
                                 </tr>
                                 <tr>
@@ -714,7 +722,7 @@
                                         <strong>Envío:</strong>
                                     </td>
                                     <td style="padding: 12px 15px; text-align: right; font-weight: 600;">
-                                        $<span id="invoice-shipping">0.00</span>
+                                        <span id="invoice-shipping">0.00</span>
                                     </td>
                                 </tr>
                                 <tr style="background: #f1f5f9;">
@@ -722,7 +730,7 @@
                                         <h4 style="margin: 0; color: #1e293b;">TOTAL:</h4>
                                     </td>
                                     <td style="padding: 12px 15px; text-align: right;">
-                                        <h4 style="margin: 0; color: #059669;">$<span id="invoice-total">0.00</span>
+                                        <h4 style="margin: 0; color: #059669;"> <span id="invoice-total">0.00</span>
                                         </h4>
                                     </td>
                                 </tr>
@@ -763,19 +771,12 @@
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="/js/supabase-client.js"></script> <!-- Este es el de admin -->
-    <script src="/js/admin-init.js"></script>
-        <script src="/JS/config.js"></script>
+    <script src="js/supabase-client.js"></script> <!-- Este es el de admin -->
+    <script src="js/admin-init.js"></script>
     <!-- NO cargar app.js aquí -->
 
-    <script src="/js/price-adjustment-fixed.js"></script>
+    <script src="js/price-adjustment-fixed.js"></script>
 
 </body>
 
-
 </html>
-
-
-
-
-
