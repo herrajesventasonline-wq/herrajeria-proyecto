@@ -5,15 +5,24 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Herraje RioIv - Materiales Industriales Premium</title>
-     <!-- Configuración segura -->
-      <!-- Configuración -->
-<!-- En tu index.html, justo después de <body> -->
-<script>
-  // INYECCIÓN TEMPORAL
-  window.SUPABASE_URL = 'https://opueqifkagoonpbubflj.supabase.co';
-  window.SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9wdWVxaWZrYWdvb25wYnViZmxqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMzNDc3OTksImV4cCI6MjA3ODkyMzc5OX0.8ES1VbCKOu79JrMpPNTkUuDZmo9MOHsVZunui4CJYSI';
-  console.log('⚠️ Variables inyectadas directamente en HTML');
-</script>
+    <!-- Configuración segura -->
+    <!-- Configuración -->
+    <script>
+        // Detectar si estamos en desarrollo
+        const isDevelopment = window.location.hostname === 'localhost' ||
+            window.location.hostname === '127.0.0.1';
+
+        if (isDevelopment) {
+            console.log('🚀 Modo desarrollo detectado');
+            // En desarrollo, cargamos config.js
+            document.write('<script src="/js/config.js"><\/script>');
+        } else {
+            console.log('🚀 Modo producción');
+            // En producción, Netlify inyectará las variables
+            window.SUPABASE_URL = '{{SUPABASE_URL}}';
+            window.SUPABASE_ANON_KEY = '{{SUPABASE_ANON_KEY}}';
+        }
+    </script>
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -21,8 +30,8 @@
         href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Roboto+Condensed:wght@700;800;900&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="css/styles.css">
-        <style>
-        
+    <style>
+
     </style>
 
 </head>
@@ -46,11 +55,11 @@
         </div>
     </div>
 
-      
+
 
 
     <!-- Header -->
-     <!-- Header -->
+    <!-- Header -->
     <header class="header-main">
         <div class="container">
             <div class="row align-items-center">
@@ -60,21 +69,21 @@
                         <i class="fas fa-bars"></i>
                     </button>
                 </div>
-                
+
                 <div class="col-md-3 col-6">
                     <a href="#" class="logo">
                         <i class="fas fa-industry logo-icon"></i>Herraje<span>RioIv</span>
                     </a>
                 </div>
-                
+
                 <div class="col-md-6 d-none d-md-block">
                     <div class="search-box">
                         <input type="text" class="form-control" id="searchInput" placeholder="Buscar productos...">
                         <button type="button" id="searchButton"><i class="fas fa-search"></i></button>
                     </div>
                 </div>
-                
-                  <div class="col-md-3">
+
+                <div class="col-md-3">
                     <div class="user-actions d-flex justify-content-end">
                         <a href="#" id="accountLink" data-bs-toggle="modal" data-bs-target="#loginModal">
                             <i class="fas fa-user me-1"></i>Mi Cuenta
@@ -105,24 +114,25 @@
                         Productos
                     </a>
                     <!-- En la navigation, modifica el dropdown menu -->
-               <!-- En la navigation, modifica el dropdown menu -->
+                    <!-- En la navigation, modifica el dropdown menu -->
                     <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="#" onclick="filterByCategory('Linea Mueble')"><i
+                        <li><a class="dropdown-item" href="#mueble" onclick="filterByCategory('Linea Mueble')"><i
                                     class="fas fa-door-closed"></i>Linea Mueble</a></li>
-                        <li><a class="dropdown-item" href="#" onclick="filterByCategory('Linea Aluminio')"><i
+                        <li><a class="dropdown-item" href="#aluminio" onclick="filterByCategory('Linea Aluminio')"><i
                                     class="fas fa-shield-alt"></i>Linea Aluminio</a></li>
-                        <li><a class="dropdown-item" href="#" onclick="filterByCategory('Linea Baño')"><i
+                        <li><a class="dropdown-item" href="#baño" onclick="filterByCategory('Linea Baño')"><i
                                     class="fas fa-chair"></i> Linea Baño</a></li>
-                        <li><a class="dropdown-item" href="#" onclick="filterByCategory('Linea Puerta')"><i
+                        <li><a class="dropdown-item" href="#puerta" onclick="filterByCategory('Linea Puerta')"><i
                                     class="fas fa-door-closed"></i> Linea Puerta</a></li>
-                        <li><a class="dropdown-item" href="#" onclick="filterByCategory('Linea Vidrio')"><i
+                        <li><a class="dropdown-item" href="#vidrio" onclick="filterByCategory('Linea Vidrio')"><i
                                     class="fas fa-box-open"></i> Linea Vidrio</a></li>
-                        <li><a class="dropdown-item" href="#" onclick="filterByCategory('Linea Portones')"><i
+                        <li><a class="dropdown-item" href="#portones" onclick="filterByCategory('Linea Portones')"><i
                                     class="fa fa-door-closed"></i> Linea portones</a></li>
-                        <li><a class="dropdown-item" href="#" onclick="filterByCategory('Herramientas')"><i
+                        <li><a class="dropdown-item" href="#herramientas" onclick="filterByCategory('Herramientas')"><i
                                     class="fas fa-tools"></i> Herramientas</a></li>
-                        <li><a class="dropdown-item" href="#" onclick="filterByCategory('Linea Cocina & Lavadero')"><i
-                                    class="fas fa-store"></i> Linea Cocina & Lavadero</a></li>
+                        <li><a class="dropdown-item" href="#cocina-lavadero"
+                                onclick="filterByCategory('Linea Cocina & Lavadero')"><i class="fas fa-store"></i> Linea
+                                Cocina & Lavadero</a></li>
                     </ul>
                 </li>
                 <li class="nav-item">
@@ -134,7 +144,7 @@
             </ul>
         </div>
     </nav>
- <!-- Mobile Navigation Menu -->
+    <!-- Mobile Navigation Menu -->
     <div class="mobile-nav-container" id="mobileNavContainer">
         <div class="mobile-menu-header">
             <a href="#" class="mobile-logo">
@@ -159,67 +169,68 @@
                     <a href="#" class="mobile-nav-link">
                         <i class="fas fa-home"></i>Inicio
                     </a>
-                
+
                 </li>
-                
+
                 <li class="mobile-nav-item" style="--item-index: 1;">
                     <a href="#products-section" class="mobile-nav-link mobile-dropdown-toggle">
                         <i class="fas fa-boxes"></i>Productos
                         <i class="fas fa-chevron-down dropdown-arrow"></i>
                     </a>
                     <div class="mobile-dropdown" id="mobileProductsDropdown">
-                        <a href="#" class="mobile-dropdown-link" onclick="filterByCategory('Linea Mueble')">
+                        <a href="#" class="mobile-dropdown-link" data-category="Linea Mueble" onclick="filterByCategory('Linea Mueble')">
                             <i class="fas fa-door-closed"></i>Línea Mueble
                         </a>
-                        <a href="#" class="mobile-dropdown-link" onclick="filterByCategory('Linea Aluminio')">
+                        <a href="#" class="mobile-dropdown-link" data-category="Linea Aluminio" onclick="filterByCategory('Linea Aluminio')">
                             <i class="fas fa-shield-alt"></i>Línea Aluminio
                         </a>
-                        <a href="#" class="mobile-dropdown-link" onclick="filterByCategory('Linea Baño')">
+                        <a href="#" class="mobile-dropdown-link" data-category="Linea Baño" onclick="filterByCategory('Linea Baño')">
                             <i class="fas fa-chair"></i>Línea Baño
                         </a>
-                        <a href="#" class="mobile-dropdown-link" onclick="filterByCategory('Linea Puerta')">
+                        <a href="#" class="mobile-dropdown-link" data-category="Linea Puerta" onclick="filterByCategory('Linea Puerta')">
                             <i class="fas fa-door-closed"></i>Línea Puerta
                         </a>
-                        <a href="#" class="mobile-dropdown-link" onclick="filterByCategory('Linea Vidrio')">
+                        <a href="#" class="mobile-dropdown-link" data-category="Linea Vidrio" onclick="filterByCategory('Linea Vidrio')">
                             <i class="fas fa-box-open"></i>Línea Vidrio
                         </a>
-                        <a href="#" class="mobile-dropdown-link" onclick="filterByCategory('Linea Portones')">
+                        <a href="#" class="mobile-dropdown-link" data-category="Linea Portones" onclick="filterByCategory('Linea Portones')">
                             <i class="fas fa-door-closed"></i>Línea Portones
                         </a>
-                        <a href="#" class="mobile-dropdown-link" onclick="filterByCategory('Herramientas')">
+                        <a href="#" class="mobile-dropdown-link" data-category="Herramientas" onclick="filterByCategory('Herramientas')">
                             <i class="fas fa-tools"></i>Herramientas
                         </a>
-                        <a href="#" class="mobile-dropdown-link" onclick="filterByCategory('Linea Cocina & Lavadero')">
+                        <a href="#" class="mobile-dropdown-link" data-category="Linea Cocina & Lavadero" onclick="filterByCategory('Linea Cocina & Lavadero')">
                             <i class="fas fa-store"></i>Cocina & Lavadero
                         </a>
-                        <a href="#" class="mobile-dropdown-link" onclick="filterByCategory('Todos los Productos')">
+                        <a href="#" class="mobile-dropdown-link" data-category="Todos los Productos" onclick="filterByCategory('Todos los Productos')">
                             <i class="fas fa-th"></i>Todos los Productos
                         </a>
                     </div>
                 </li>
-                
+
                 <li class="mobile-nav-item" style="--item-index: 2;">
                     <a href="#about" class="mobile-nav-link">
                         <i class="fas fa-info-circle"></i>Sobre Nosotros
                     </a>
                 </li>
-                
+
                 <li class="mobile-nav-item" style="--item-index: 3;">
                     <a href="#contact" class="mobile-nav-link">
                         <i class="fas fa-envelope"></i>Contacto
                     </a>
                 </li>
-                
-             
+
+
             </ul>
         </div>
 
         <div class="mobile-user-actions">
-          
-               <a href="#" class="mobile-action-link" id="accountLink" data-bs-toggle="modal" data-bs-target="#loginModal">
-                            <i class="fas fa-user me-1"></i>Mi Cuenta
-                        </a>
-            <a href="#" class="mobile-action-link" onclick="toggleMobileMenu();" data-bs-toggle="offcanvas" data-bs-target="#cartOffcanvas">
+
+            <a href="#" class="mobile-action-link" id="accountLink" data-bs-toggle="modal" data-bs-target="#loginModal">
+                <i class="fas fa-user me-1"></i>Mi Cuenta
+            </a>
+            <a href="#" class="mobile-action-link" onclick="toggleMobileMenu();" data-bs-toggle="offcanvas"
+                data-bs-target="#cartOffcanvas">
                 <i class="fas fa-shopping-cart"></i>Carrito
                 <span class="mobile-cart-badge" id="mobileCartBadge">0</span>
             </a>
@@ -229,13 +240,13 @@
             <p class="mb-2"><i class="fas fa-phone me-2"></i>+54 358 1234-5678</p>
             <p><i class="fas fa-clock me-2"></i>Lun-Vie: 7:00 - 19:00</p>
         </div>
-           <div class="social-icons mt-4" style="text-align: center;">
-                        <a href="https://wa.me/5435812345678"><i class="fab fa-whatsapp"></i></a>
-                        <a href="#"><i class="fas fa-envelope"></i></a>
-                        <a href="#"><i class="fab fa-instagram"></i></a>
-                        
+        <div class="social-icons mt-4" style="text-align: center;">
+            <a href="https://wa.me/5435812345678"><i class="fab fa-whatsapp"></i></a>
+            <a href="#"><i class="fas fa-envelope"></i></a>
+            <a href="#"><i class="fab fa-instagram"></i></a>
 
-                    </div>
+
+        </div>
     </div>
 
 
@@ -245,7 +256,7 @@
         <div class="carousel">
             <div class="carousel-inner">
 
-                <div class="carousel-slide" class="card-img-top" alt="Línea Aluminio"
+                <div class="carousel-slide" data-category="Linea Mueble" class="card-img-top" alt="Línea Mueble"
                     onclick="filterByCategory('Linea Mueble')">
                     <div class="slide-image-wrapper">
                         <img src="assets/img/linea_muebles_4.png" alt="Muebles de alta calidad" class="card-img-top"
@@ -269,12 +280,12 @@
                     </section>
                 </div>
 
-                <div class="carousel-slide" class="card-img-top" alt="Línea Aluminio"
+                <div class="carousel-slide" data-category="Linea Herramientas" class="card-img-top" alt="Línea Herramientas"
                     onclick="filterByCategory('Herramientas')">
 
                     <div class="slide-image-wrapper">
                         <img src="assets/img/linea_herramientas.png" alt="Herramientas profesionales"
-                            class="card-img-top" alt="Línea Aluminio" onclick="filterByCategory('Herramientas')">
+                            class="card-img-top" alt="Línea Herramientas" onclick="filterByCategory('Herramientas')">
 
                     </div>
                     <section class="hero-section_2">
@@ -295,11 +306,11 @@
 
                 </div>
 
-                <div class="carousel-slide" class="card-img-top" alt="Línea Aluminio"
+                <div class="carousel-slide" data-category="Linea Puerta" class="card-img-top" alt="Línea Puerta"
                     onclick="filterByCategory('Linea Puerta')">
                     <div class="slide-image-wrapper">
                         <img src="assets/img/linea_puerta_6.png" alt="Puertas seguras y duraderas" class="card-img-top"
-                            alt="Línea Aluminio" onclick="filterByCategory('Linea Puerta')">
+                            alt="Línea Puerta" onclick="filterByCategory('Linea Puerta')">
                     </div>
                     <section class="hero-section_2">
                         <div class="container">
@@ -318,11 +329,11 @@
                     </section>
                 </div>
 
-                <div class="carousel-slide" class="card-img-top" alt="Línea Aluminio"
+                <div class="carousel-slide" data-category="Linea Portones" class="card-img-top" alt="Línea Portones"
                     onclick="filterByCategory('Linea Portones')">
                     <div class="slide-image-wrapper">
                         <img src="assets/img/linea_portones_5.png" alt="Portones resistentes" class="card-img-top"
-                            alt="Línea Aluminio" onclick="filterByCategory('Linea Portones')">
+                            alt="Línea Portones" onclick="filterByCategory('Linea Portones')">
                     </div>
                     <section class="hero-section_2">
                         <div class="container">
@@ -341,11 +352,11 @@
                     </section>
                 </div>
 
-                <div class="carousel-slide" class="card-img-top" alt="Línea Aluminio"
-                    onclick="filterByCategory('Linea Aluminio')">
+                <div class="carousel-slide" data-category="Linea Vidrio" class="card-img-top" alt="Línea Vidrio"
+                    onclick="filterByCategory('Linea Vidrio')">
                     <div class="slide-image-wrapper">
                         <img src="assets/img/linea_vidrio_8.png" alt="Vidrios de alta resistencia" class="card-img-top"
-                            alt="Línea Aluminio" onclick="filterByCategory('Linea Aluminio')">
+                            alt="Línea Vidrio" onclick="filterByCategory('Linea Vidrio')">
                     </div>
                     <section class="hero-section_2">
                         <div class="container">
@@ -364,11 +375,11 @@
                     </section>
                 </div>
 
-                <div class="carousel-slide" class="card-img-top" alt="Línea Aluminio"
+                <div class="carousel-slide" data-category="Linea Cocina & Lavadero" class="card-img-top" alt="Línea Cocina & Lavadero"
                     onclick="filterByCategory('Linea Cocina & Lavadero')">
                     <div class="slide-image-wrapper">
                         <img src="assets/img/linea_cocina&lavadero_3.png" alt="Cocinas y lavaderos funcionales"
-                            class="card-img-top" alt="Línea Aluminio"
+                            class="card-img-top" alt="Línea Cocina & Lavadero"
                             onclick="filterByCategory('Linea Cocina & Lavadero')">
                     </div>
                     <section class="hero-section_2">
@@ -414,7 +425,7 @@
         <div class="row">
             <!-- Modificación: agregar col-6 para dispositivos extra pequeños -->
             <div class="col-6 col-md-4">
-                <div class="card category-card">
+                <div class="card category-card" data-category="Linea Aluminio">
                     <img src="/assets/img/linea_aluminio_1.png" class="card-img-top" alt="Línea Aluminio"
                         onclick="filterByCategory('Linea Aluminio')">
                     <div class="card-body">
@@ -428,7 +439,7 @@
             </div>
 
             <div class="col-6 col-md-4">
-                <div class="card category-card">
+                <div class="card category-card" data-category="Linea Baño">
                     <img src="/assets/img/linea_baño_2.png" class="card-img-top" alt="Línea Baño"
                         onclick="filterByCategory('Linea Baño')">
                     <div class="card-body">
@@ -442,7 +453,7 @@
             </div>
 
             <div class="col-6 col-md-4">
-                <div class="card category-card">
+                <div class="card category-card" data-category="Linea Cocina & Lavadero">
                     <img src="/assets/img/linea_cocina&lavadero_3.png" class="card-img-top"
                         alt="Linea Cocina & Lavadero" onclick="filterByCategory('Linea Cocina & Lavadero')">
                     <div class="card-body">
@@ -457,7 +468,7 @@
             </div>
 
             <div class="col-6 col-md-4">
-                <div class="card category-card">
+                <div class="card category-card" data-category="Linea Mueble">
                     <img src="/assets/img/linea_muebles_4.png" class="card-img-top" alt="Línea Muebles"
                         onclick="filterByCategory('Linea Mueble')">
                     <div class="card-body">
@@ -471,7 +482,7 @@
             </div>
 
             <div class="col-6 col-md-4">
-                <div class="card category-card">
+                <div class="card category-card" data-category="Linea Portones">
                     <img src="/assets/img/linea_portones_5.png" class="card-img-top" alt="Línea Portones"
                         onclick="filterByCategory('Linea Portones')">
                     <div class="card-body">
@@ -485,7 +496,7 @@
             </div>
 
             <div class="col-6 col-md-4">
-                <div class="card category-card">
+                <div class="card category-card" data-category="Linea Puerta">
                     <img src="/assets/img/linea_puerta_6.png" class="card-img-top" alt="Línea Puertas"
                         onclick="filterByCategory('Linea Puerta')">
                     <div class="card-body">
@@ -499,7 +510,7 @@
             </div>
 
             <div class="col-6 col-md-4">
-                <div class="card category-card">
+                <div class="card category-card" data-category="Linea Herramientas">
                     <img src="/assets/img/linea_herramientas.png" class="card-img-top" alt="Herramientas"
                         onclick="filterByCategory('Herramientas')">
                     <div class="card-body">
@@ -513,7 +524,7 @@
             </div>
 
             <div class="col-6 col-md-4">
-                <div class="card category-card">
+                <div class="card category-card" data-category="Linea Vidrio">
                     <img src="/assets/img/linea_vidrio_8.png" class="card-img-top" alt="Línea Vidrio"
                         onclick="filterByCategory('Linea Vidrio')">
                     <div class="card-body">
@@ -527,7 +538,7 @@
             </div>
 
             <div class="col-6 col-md-4">
-                <div class="card category-card">
+                <div class="card category-card" data-category="Todos los Productos">
                     <img src="/assets/img/todo_los_productos.webp" class="card-img-top" alt="Todos los Productos"
                         onclick="filterByCategory('Todos los Productos')" id="show-all-btn">
                     <div class="card-body">
@@ -575,7 +586,7 @@
         
     </div>
 </section>
--->
+
         <!-- Best Selling Products Section -->
         <section class="container my-5 py-5" id="best-selling-section" style="display: none;">
             <h2 class="section-title">Productos Más Vendidos</h2>
@@ -708,17 +719,17 @@
         <div class="container">
             <div class="row">
                 <div class="col-lg-3 col-md-6 mb-4">
-                    
-                     <h5 class="logo">
+
+                    <h5 class="logo">
                         <i class="fas fa-industry logo-icon"></i>Herraje<span>RioIv</span>
-                     </h5>
+                    </h5>
                     <p>Proveedor líder de soluciones industriales con más de 25 años en el mercado. Calidad, innovación
                         y servicio.</p>
                     <div class="social-icons mt-4">
                         <a href="https://wa.me/5435812345678"><i class="fab fa-whatsapp"></i></a>
                         <a href="#"><i class="fas fa-envelope"></i></a>
                         <a href="#"><i class="fab fa-instagram"></i></a>
-                       
+
 
                     </div>
                 </div>
@@ -729,26 +740,26 @@
                         <li><a href="#">Productos</a></li>
                         <li><a href="#">Sobre Nosotros</a></li>
                         <li><a href="#">Contacto</a></li>
-                        
+
                     </ul>
                 </div>
                 <div class="col-lg-3 col-md-6 mb-4" class="nav-item dropdown">
                     <h5>Categorías</h5>
                     <ul class="footer-links">
 
-                        <li><a class="dropdown-item" href="#" onclick="filterByCategory('Linea Mueble')"><i
+                        <li><a class="dropdown-item" href="#" data-category="Linea Mueble" onclick="filterByCategory('Linea Mueble')"><i
                                     class="fas fa-door-closed"></i>Linea Mueble</a></li>
-                        <li><a class="dropdown-item" href="#" onclick="filterByCategory('Linea Aluminio')"><i
+                        <li><a class="dropdown-item" href="#" data-category="Linea Aluminio" onclick="filterByCategory('Linea Aluminio')"><i
                                     class="fas fa-shield-alt"></i>Linea Aluminio</a></li>
-                        <li><a class="dropdown-item" href="#" onclick="filterByCategory('Linea Baño')"><i
+                        <li><a class="dropdown-item" href="#" data-category="Linea Baño" onclick="filterByCategory('Linea Baño')"><i
                                     class="fas fa-chair"></i> Linea Baño</a></li>
-                        <li><a class="dropdown-item" href="#" onclick="filterByCategory('Linea Puerta')"><i
+                        <li><a class="dropdown-item" href="#" data-category="Linea Puerta" onclick="filterByCategory('Linea Puerta')"><i
                                     class="fas fa-door-closed"></i> Linea Puerta</a></li>
-                        <li><a class="dropdown-item" href="#" onclick="filterByCategory('Linea Vidrio')"><i
+                        <li><a class="dropdown-item" href="#" data-category="Linea Vidrio" onclick="filterByCategory('Linea Vidrio')"><i
                                     class="fas fa-box-open"></i> Linea Vidrio</a></li>
-                        <li><a class="dropdown-item" href="#" onclick="filterByCategory('Linea Portones')"><i
+                        <li><a class="dropdown-item" href="#" data-category="Linea Portones" onclick="filterByCategory('Linea Portones')"><i
                                     class="fa fa-door-closed"></i> Linea portones</a></li>
-                        <li><a class="dropdown-item" href="#" onclick="filterByCategory('Herramientas')"><i
+                        <li><a class="dropdown-item" href="#" data-category="Herramientas" onclick="filterByCategory('Herramientas')"><i
                                     class="fas fa-tools"></i> Herramientas</a></li>
                     </ul>
                 </div>
@@ -827,7 +838,7 @@
                                         <!-- Los dots se generarán dinámicamente -->
                                     </div>
                                     <div class="touch-hint">
-                                        <i class="fas fa-expand-alt"></i> Toca para zoom completo
+                                        <i class="fas fa-expand-alt"></i> Toca Dos veces para zoom completo
                                     </div>
                                 </div>
 
@@ -1371,7 +1382,7 @@
                         </div>
                     </div>
 
-                    
+
                 </div>
             </div>
         </div>
@@ -1466,14 +1477,13 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <!-- CARGAR AMBOS clientes: -->
-    <script src="/js/supabase-client-public.js"></script>
-
-    <script src="/js/app.js"></script>
+    <script src="js/supabase-client-public.js"></script>
+    <!-- Después de app.js -->
+    <script src="js/responsive-filters.js"></script>
+    <script src="js/app.js"></script>
 
 
 
 </body>
 
 </html>
-
-
