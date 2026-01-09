@@ -7,12 +7,12 @@
     <title>Herraje RioIv - Materiales Industriales Premium</title>
     <!-- Configuración segura -->
     <!-- Configuración -->
-<script>
-  // INYECCIÓN TEMPORAL
-  window.SUPABASE_URL = 'https://opueqifkagoonpbubflj.supabase.co';
-  window.SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9wdWVxaWZrYWdvb25wYnViZmxqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMzNDc3OTksImV4cCI6MjA3ODkyMzc5OX0.8ES1VbCKOu79JrMpPNTkUuDZmo9MOHsVZunui4CJYSI';
-  console.log('⚠️ Variables inyectadas directamente en HTML');
-</script>
+    <script>
+        // INYECCIÓN TEMPORAL
+        window.SUPABASE_URL = 'https://opueqifkagoonpbubflj.supabase.co';
+        window.SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9wdWVxaWZrYWdvb25wYnViZmxqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMzNDc3OTksImV4cCI6MjA3ODkyMzc5OX0.8ES1VbCKOu79JrMpPNTkUuDZmo9MOHsVZunui4CJYSI';
+        console.log('⚠️ Variables inyectadas directamente en HTML');
+    </script>
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -35,6 +35,7 @@
             <div class="d-flex justify-content-between">
                 <div>
                     <a href="#"> <i class="fas fa-phone-alt me-1"></i> +54 358 1234-5678</a>
+
                     <a href="#"> <i class="fas fa-envelope me-1"></i></i> HerrajeRioIv@gmail.com</a>
                 </div>
                 <div>
@@ -73,11 +74,21 @@
                     </div>
                 </div>
 
+
                 <div class="col-md-3">
                     <div class="user-actions d-flex justify-content-end">
+                        <div class="social-icons me-3 d-none d-md-flex">
+
+                            <a href="#"><i class="fas fa-envelope"></i></a>
+                            <a href="#"><i class="fab fa-instagram"></i></a>
+                            <a href="https://wa.me/5435812345678"><i class="fab fa-whatsapp"></i></a>
+
+
+                        </div>
                         <a href="#" id="accountLink" data-bs-toggle="modal" data-bs-target="#loginModal">
                             <i class="fas fa-user me-1"></i>Mi Cuenta
                         </a>
+                        <a> | </a>
                         <a href="#" class="cart-icon" id="cartLink" data-bs-toggle="offcanvas"
                             data-bs-target="#cartOffcanvas">
                             <i class="fas fa-shopping-cart"></i>
@@ -168,31 +179,40 @@
                         <i class="fas fa-chevron-down dropdown-arrow"></i>
                     </a>
                     <div class="mobile-dropdown" id="mobileProductsDropdown">
-                        <a href="#" class="mobile-dropdown-link" data-category="Linea Mueble" onclick="filterByCategory('Linea Mueble')">
+                        <a href="#" class="mobile-dropdown-link" data-category="Linea Mueble"
+                            onclick="filterByCategory('Linea Mueble')">
                             <i class="fas fa-door-closed"></i>Línea Mueble
                         </a>
-                        <a href="#" class="mobile-dropdown-link" data-category="Linea Aluminio" onclick="filterByCategory('Linea Aluminio')">
+                        <a href="#" class="mobile-dropdown-link" data-category="Linea Aluminio"
+                            onclick="filterByCategory('Linea Aluminio')">
                             <i class="fas fa-shield-alt"></i>Línea Aluminio
                         </a>
-                        <a href="#" class="mobile-dropdown-link" data-category="Linea Baño" onclick="filterByCategory('Linea Baño')">
+                        <a href="#" class="mobile-dropdown-link" data-category="Linea Baño"
+                            onclick="filterByCategory('Linea Baño')">
                             <i class="fas fa-chair"></i>Línea Baño
                         </a>
-                        <a href="#" class="mobile-dropdown-link" data-category="Linea Puerta" onclick="filterByCategory('Linea Puerta')">
+                        <a href="#" class="mobile-dropdown-link" data-category="Linea Puerta"
+                            onclick="filterByCategory('Linea Puerta')">
                             <i class="fas fa-door-closed"></i>Línea Puerta
                         </a>
-                        <a href="#" class="mobile-dropdown-link" data-category="Linea Vidrio" onclick="filterByCategory('Linea Vidrio')">
+                        <a href="#" class="mobile-dropdown-link" data-category="Linea Vidrio"
+                            onclick="filterByCategory('Linea Vidrio')">
                             <i class="fas fa-box-open"></i>Línea Vidrio
                         </a>
-                        <a href="#" class="mobile-dropdown-link" data-category="Linea Portones" onclick="filterByCategory('Linea Portones')">
+                        <a href="#" class="mobile-dropdown-link" data-category="Linea Portones"
+                            onclick="filterByCategory('Linea Portones')">
                             <i class="fas fa-door-closed"></i>Línea Portones
                         </a>
-                        <a href="#" class="mobile-dropdown-link" data-category="Herramientas" onclick="filterByCategory('Herramientas')">
+                        <a href="#" class="mobile-dropdown-link" data-category="Herramientas"
+                            onclick="filterByCategory('Herramientas')">
                             <i class="fas fa-tools"></i>Herramientas
                         </a>
-                        <a href="#" class="mobile-dropdown-link" data-category="Linea Cocina & Lavadero" onclick="filterByCategory('Linea Cocina & Lavadero')">
+                        <a href="#" class="mobile-dropdown-link" data-category="Linea Cocina & Lavadero"
+                            onclick="filterByCategory('Linea Cocina & Lavadero')">
                             <i class="fas fa-store"></i>Cocina & Lavadero
                         </a>
-                        <a href="#" class="mobile-dropdown-link" data-category="Todos los Productos" onclick="filterByCategory('Todos los Productos')">
+                        <a href="#" class="mobile-dropdown-link" data-category="Todos los Productos"
+                            onclick="filterByCategory('Todos los Productos')">
                             <i class="fas fa-th"></i>Todos los Productos
                         </a>
                     </div>
@@ -270,8 +290,8 @@
                     </section>
                 </div>
 
-                <div class="carousel-slide" data-category="Linea Herramientas" class="card-img-top" alt="Línea Herramientas"
-                    onclick="filterByCategory('Herramientas')">
+                <div class="carousel-slide" data-category="Linea Herramientas" class="card-img-top"
+                    alt="Línea Herramientas" onclick="filterByCategory('Herramientas')">
 
                     <div class="slide-image-wrapper">
                         <img src="assets/img/linea_herramientas.png" alt="Herramientas profesionales"
@@ -365,8 +385,8 @@
                     </section>
                 </div>
 
-                <div class="carousel-slide" data-category="Linea Cocina & Lavadero" class="card-img-top" alt="Línea Cocina & Lavadero"
-                    onclick="filterByCategory('Linea Cocina & Lavadero')">
+                <div class="carousel-slide" data-category="Linea Cocina & Lavadero" class="card-img-top"
+                    alt="Línea Cocina & Lavadero" onclick="filterByCategory('Linea Cocina & Lavadero')">
                     <div class="slide-image-wrapper">
                         <img src="assets/img/linea_cocina&lavadero_3.png" alt="Cocinas y lavaderos funcionales"
                             class="card-img-top" alt="Línea Cocina & Lavadero"
@@ -545,6 +565,24 @@
     </section>
 
 
+    <!--  <section id="offers-section" class="products-grid" style="display: none;">
+    <div class="container">
+        <div class="row mb-4">
+            <div class="col-12">
+                <h2 class="section-title text-center">
+                    <i class="fas fa-tag me-2"></i>Productos en Oferta
+                </h2>
+                <p class="text-center text-muted">Productos seleccionados con descuentos especiales</p>
+            </div>
+        </div>
+        <div class="row" id="offers-container">
+           Los productos en oferta se cargarán aquí -->
+    <!--</div>
+    </div>
+</section>
+    Sección de Productos en Oferta -->
+
+
     <section class="container my-5 py-5" id="products-section" style="display: none;">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h2 class="section-title mb-0" id="products-section-title">Productos</h2>
@@ -553,23 +591,28 @@
         </div>
         <div class="row" id="products-container">
             <!-- Los productos se cargarán dinámicamente desde Supabase -->
-        </div>
 
-        <!-- Contenedor de paginación -->
-        <div class="row mt-5">
-            <div class="col-12">
-                <nav aria-label="Paginación de productos">
-                    <ul class="pagination justify-content-center" id="products-pagination">
-                        <!-- La paginación se generará dinámicamente -->
-                    </ul>
-                </nav>
+            <!-- En tu plantilla de producto para usuarios -->
+            <div class="product-card">
+
             </div>
-        </div>
+
+            <!-- Contenedor de paginación -->
+            <div class="row mt-5">
+                <div class="col-12">
+                    <nav aria-label="Paginación de productos">
+                        <ul class="pagination justify-content-center" id="products-pagination">
+                            <!-- La paginación se generará dinámicamente -->
+                        </ul>
+                    </nav>
+                </div>
+            </div>
 
 
 
-        <!-- ELIMINA ESTA SECCIÓN COMPLETA -->
-        <!--
+
+            <!-- ELIMINA ESTA SECCIÓN COMPLETA -->
+            <!--
 <section class="container my-5 py-5" id="most-clicked-section" style="display: none;">
     <h2 class="section-title">Productos Más Clickeados</h2>
     <div class="row" id="most-clicked-container">
@@ -578,14 +621,15 @@
 </section>
 
         <!-- Best Selling Products Section -->
-        <section class="container my-5 py-5" id="best-selling-section" style="display: none;">
-            <h2 class="section-title">Productos Más Vendidos</h2>
-            <div class="row" id="best-selling-container">
-                <!-- Los productos más vendidos se cargarán dinámicamente -->
+            <section class="container my-5 py-5" id="best-selling-section" style="display: none;">
+                <h2 class="section-title">Productos Más Vendidos</h2>
+                <div class="row" id="best-selling-container">
+                    <!-- Los productos más vendidos se cargarán dinámicamente -->
 
 
-            </div>
-        </section>
+                </div>
+            </section>
+
 
 
 
@@ -737,20 +781,27 @@
                     <h5>Categorías</h5>
                     <ul class="footer-links">
 
-                        <li><a class="dropdown-item" href="#" data-category="Linea Mueble" onclick="filterByCategory('Linea Mueble')"><i
-                                    class="fas fa-door-closed"></i>Linea Mueble</a></li>
-                        <li><a class="dropdown-item" href="#" data-category="Linea Aluminio" onclick="filterByCategory('Linea Aluminio')"><i
-                                    class="fas fa-shield-alt"></i>Linea Aluminio</a></li>
-                        <li><a class="dropdown-item" href="#" data-category="Linea Baño" onclick="filterByCategory('Linea Baño')"><i
-                                    class="fas fa-chair"></i> Linea Baño</a></li>
-                        <li><a class="dropdown-item" href="#" data-category="Linea Puerta" onclick="filterByCategory('Linea Puerta')"><i
-                                    class="fas fa-door-closed"></i> Linea Puerta</a></li>
-                        <li><a class="dropdown-item" href="#" data-category="Linea Vidrio" onclick="filterByCategory('Linea Vidrio')"><i
-                                    class="fas fa-box-open"></i> Linea Vidrio</a></li>
-                        <li><a class="dropdown-item" href="#" data-category="Linea Portones" onclick="filterByCategory('Linea Portones')"><i
-                                    class="fa fa-door-closed"></i> Linea portones</a></li>
-                        <li><a class="dropdown-item" href="#" data-category="Herramientas" onclick="filterByCategory('Herramientas')"><i
-                                    class="fas fa-tools"></i> Herramientas</a></li>
+                        <li><a class="dropdown-item" href="#" data-category="Linea Mueble"
+                                onclick="filterByCategory('Linea Mueble')"><i class="fas fa-door-closed"></i>Linea
+                                Mueble</a></li>
+                        <li><a class="dropdown-item" href="#" data-category="Linea Aluminio"
+                                onclick="filterByCategory('Linea Aluminio')"><i class="fas fa-shield-alt"></i>Linea
+                                Aluminio</a></li>
+                        <li><a class="dropdown-item" href="#" data-category="Linea Baño"
+                                onclick="filterByCategory('Linea Baño')"><i class="fas fa-chair"></i> Linea Baño</a>
+                        </li>
+                        <li><a class="dropdown-item" href="#" data-category="Linea Puerta"
+                                onclick="filterByCategory('Linea Puerta')"><i class="fas fa-door-closed"></i> Linea
+                                Puerta</a></li>
+                        <li><a class="dropdown-item" href="#" data-category="Linea Vidrio"
+                                onclick="filterByCategory('Linea Vidrio')"><i class="fas fa-box-open"></i> Linea
+                                Vidrio</a></li>
+                        <li><a class="dropdown-item" href="#" data-category="Linea Portones"
+                                onclick="filterByCategory('Linea Portones')"><i class="fa fa-door-closed"></i> Linea
+                                portones</a></li>
+                        <li><a class="dropdown-item" href="#" data-category="Herramientas"
+                                onclick="filterByCategory('Herramientas')"><i class="fas fa-tools"></i> Herramientas</a>
+                        </li>
                     </ul>
                 </div>
                 <div class="col-lg-3 col-md-6 mb-4">
@@ -769,7 +820,7 @@
             <div class="copyright">
                 <p><span id="currentYear"></span> &copy; Herrajes RioIv Industrial Solutions. Todos los derechos
                     reservados. </p>
-                <p class="footer-bottom a"><a href="https://a-e-m-desarrollador-de-sitios-web.netlify.app/">DEV + DESIGN
+                <p class="footer-bottom a"><a href="https://AEM-websitecreator.netlify.app/">Creator
                         BY AEM</a></p>
             </div>
         </div>
@@ -918,6 +969,7 @@
                             </div>
                         </div>
                     </div>
+
 
                 </div>
 
@@ -1452,7 +1504,9 @@
             </div>
         </div>
     </div>
-
+    <a href="https://wa.me/543584363974" class="whatsapp-float d-md-none" target="_blank" rel="noopener noreferrer">
+        <i class="fab fa-whatsapp"></i>
+    </a>
     <script>
         document.getElementById('currentYear').textContent = new Date().getFullYear();
     </script>
@@ -1471,10 +1525,11 @@
     <!-- Después de app.js -->
     <script src="js/responsive-filters.js"></script>
     <script src="js/app.js"></script>
+    <!-- En el <head> de tu index.html -->
+
 
 
 
 </body>
 
 </html>
-
