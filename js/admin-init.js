@@ -77,11 +77,12 @@ document.addEventListener('DOMContentLoaded', async function () {
         // Cargar datos iniciales
         await loadAdminData();
          // Cargar datos de usuarios después de un breve delay
-        setTimeout(async () => {
-            if (document.getElementById('users-list-container')) {
-                await loadUsersData();
-            }
-        }, 1000);
+             // Cargar datos de usuarios INMEDIATAMENTE
+        // No uses setTimeout
+        if (document.getElementById('users-list-container')) {
+            console.log('👥 Cargando datos de usuarios inmediatamente...');
+            await loadUsersData();
+        }
 
         // Configurar interfaz
         setupAdminEventListeners();
@@ -94,16 +95,14 @@ document.addEventListener('DOMContentLoaded', async function () {
         setupConfirmationModal();
         
         // 🔥 INICIALIZAR CALCULADORA DE PRECIOS
-        if (typeof initPriceCalculator === 'function') {
-            setTimeout(initPriceCalculator, 500);
+           if (typeof initPriceCalculator === 'function') {
+            initPriceCalculator();
         }
-
         // Inicializar sistema de ajuste de precios
-        setTimeout(() => {
-            if (typeof setupPriceAdjustmentSystem === 'function') {
-                setupPriceAdjustmentSystem();
-            }
-        }, 500);
+       // Inicializar sistema de ajuste de precios
+        if (typeof setupPriceAdjustmentSystem === 'function') {
+            setupPriceAdjustmentSystem();
+        }
 
         console.log('✅ Panel de administración inicializado correctamente');
 
@@ -338,29 +337,35 @@ function setupConfirmationModal() {
 // ==============================================
 // FUNCIONES DE INICIALIZACIÓN
 // ==============================================
-
 function waitForSupabase() {
     return new Promise((resolve, reject) => {
-        console.log('🔍 Verificando estado de Supabase...');
+        console.log('🔍 Verificando estado de Supabase y funciones...');
 
-        const maxAttempts = 50;
+        const maxAttempts = 100; // Aumenta los intentos
         let attempts = 0;
 
         const checkInterval = setInterval(() => {
             attempts++;
 
-            if (window.supabaseClient && window.supabaseClient.isReady()) {
+            if (window.supabaseClient && 
+                window.supabaseClient.isReady && 
+                window.supabaseClient.isReady() &&
+                typeof window.supabaseClient.getUsersWithOrders === 'function') {
+                
                 clearInterval(checkInterval);
-                console.log('✅ Supabase listo y funcional');
+                console.log('✅ Supabase listo con todas las funciones, incluyendo getUsersWithOrders');
                 resolve();
                 return;
             }
 
             if (attempts >= maxAttempts) {
                 clearInterval(checkInterval);
-                reject(new Error('Timeout: No se pudo inicializar Supabase'));
+                console.error('⚠️ Supabase no tiene getUsersWithOrders después de', maxAttempts, 'intentos');
+                console.log('window.supabaseClient:', window.supabaseClient);
+                console.log('getUsersWithOrders existe?:', window.supabaseClient?.getUsersWithOrders);
+                reject(new Error('Timeout: No se pudo inicializar getUsersWithOrders'));
             }
-        }, 100);
+        }, 150);
     });
 }
 
