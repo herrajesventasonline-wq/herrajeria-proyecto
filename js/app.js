@@ -127,6 +127,8 @@ async function getOrdersFromSupabase(email) {
             console.error('❌ Error en consulta:', error);
             return [];
         }
+        
+        
 
         console.log(`✅ ${data?.length || 0} pedidos obtenidos`);
         return data || [];
@@ -135,6 +137,17 @@ async function getOrdersFromSupabase(email) {
         console.error('❌ Error en getOrdersFromSupabase:', error);
         return [];
     }
+    const { data: products, error } = await supabase
+    .from('products')
+    .select(`
+        *,
+        categories(name),
+        brands(name)
+    `)
+    .eq('is_active', true)
+    .order('is_offer', { ascending: false }) // Ofertas primero
+    .order('category_order', { ascending: true }) // Luego por orden personalizado
+    .order('created_at', { ascending: false }); // Finalmente por fecha
 }
 
 
@@ -598,6 +611,12 @@ document.addEventListener('DOMContentLoaded', async function () {
         updateCartBadge();
         initHeroCarousel();
 
+        // 6. Ocultar sección de ofertas
+        const offersSection = document.getElementById('offers-section');
+        if (offersSection) {
+            offersSection.style.display = 'none';
+        }
+
         console.log('✅ Aplicación inicializada correctamente');
 
     } catch (error) {
@@ -638,6 +657,7 @@ function waitForSupabase() {
         }, 200);
     });
 }
+
 function ensureBestSellingVisible() {
     // Solo mostrar si hay productos más vendidos
     if (bestSellingProducts && bestSellingProducts.length > 0) {
@@ -649,6 +669,11 @@ function ensureBestSellingVisible() {
                 bestSellingSection.style.display = 'block';
             }
         }
+    }
+    // Ocultar sección de ofertas
+    const offersSection = document.getElementById('offers-section');
+    if (offersSection) {
+        offersSection.style.display = 'none';
     }
 }
 // ============================================
@@ -737,7 +762,6 @@ function initializeModals() {
 // ============================================
 // FUNCIONES DE PRODUCTOS
 // ============================================
-
 async function loadProductsFromSupabase() {
     try {
         console.log('🔄 Cargando productos desde Supabase...');
@@ -749,11 +773,13 @@ async function loadProductsFromSupabase() {
         let productsData;
 
         if (typeof window.supabaseClient.getProducts === 'function') {
+            // Obtener TODOS los productos activos primero
             productsData = await window.supabaseClient.getProducts();
         } else if (window.supabaseClient.supabase) {
             const { data, error } = await window.supabaseClient.supabase
                 .from('products')
                 .select('*')
+                .eq('is_active', true)
                 .order('created_at', { ascending: false });
 
             if (error) throw error;
@@ -770,7 +796,11 @@ async function loadProductsFromSupabase() {
 
         console.log(`✅ ${productsData.length} productos recibidos`);
 
+        // Procesar todos los productos
         products = productsData.map(product => processProductData(product)).filter(Boolean);
+        
+        // COMENTAR ESTA LÍNEA PARA NO CARGAR PRODUCTOS EN OFERTA
+        // await loadOfferProducts();
 
         loadPopularProducts();
         updateCartCount();
@@ -780,7 +810,205 @@ async function loadProductsFromSupabase() {
         showToast('error', 'Error al cargar productos: ' + error.message);
     }
 }
+// Nueva función para cargar productos en oferta
+async function loadOfferProducts() {
+    try {
+        console.log('🏷️ Cargando productos en oferta...');
+        
+        if (!window.supabaseClient) {
+            console.error('❌ Supabase no disponible para cargar ofertas');
+            return;
+        }
+        
+        let offerProductsData;
+        
+        // Consulta específica para productos en oferta
+        if (window.supabaseClient.supabase) {
+            const { data, error } = await window.supabaseClient.supabase
+                .from('products')
+                .select(`
+                    *,
+                    categories (name),
+                    brands (name)
+                `)
+                .eq('is_active', true)
+                .eq('is_offer', true)  // ← FILTRO CRÍTICO: solo productos en oferta
+                .order('category_order', { ascending: true })
+                .order('created_at', { ascending: false });
+                
+            if (error) throw error;
+            offerProductsData = data;
+        } else {
+            // Fallback: filtrar de la lista local
+            offerProductsData = products.filter(p => p.is_offer === true);
+        }
+        
+        if (!offerProductsData || offerProductsData.length === 0) {
+            console.log('ℹ️ No hay productos en oferta');
+            hideOffersSection();
+            return;
+        }
+        
+        console.log(`✅ ${offerProductsData.length} productos en oferta encontrados`);
+        
+        // Mostrar la sección de ofertas
+        showOffersSection();
+        
+        // Procesar productos de oferta
+        const processedOffers = offerProductsData.map(product => processProductData(product)).filter(Boolean);
+        
+        // Mostrar en el contenedor de ofertas
+        displayOfferProducts(processedOffers);
+        
+    } catch (error) {
+        console.error('❌ Error cargando productos en oferta:', error);
+        hideOffersSection();
+    }
+}
 
+// Función para mostrar productos en oferta
+function displayOfferProducts(offerProducts) {
+    const container = document.getElementById('offers-container');
+    const section = document.getElementById('offers-section');
+    
+    if (!container) {
+        console.error('❌ No se encontró el contenedor de ofertas');
+        return;
+    }
+    
+    if (!offerProducts || offerProducts.length === 0) {
+        hideOffersSection();
+        return;
+    }
+    
+    // Mostrar la sección
+    if (section) {
+        section.style.display = 'block';
+    }
+    
+    // Limpiar contenedor
+    container.innerHTML = '';
+    
+    // Mostrar cada producto en oferta
+    offerProducts.forEach(product => {
+        const discountBadge = product.discount > 0 ?
+            `<span class="product-badge">-${product.discount}%</span>` : '';
+            
+        const newBadge = product.isNew ?
+            `<span class="product-badge" style="background: var(--secondary);">Nuevo</span>` : '';
+            
+        const outOfStockBadge = product.stock <= 0 ?
+            `<span class="product-badge" style="background: var(--accent);">Sin Stock</span>` : '';
+            
+        const isOutOfStock = product.stock <= 0;
+        
+        const productCard = `
+            <div class="col-md-4 col-lg-3 mb-4">
+                <div class="card product-card offer-card ${isOutOfStock ? 'opacity-75' : ''}">
+                    <div class="position-relative">
+                        <div class="offer-ribbon">OFERTA</div>
+                        <img src="${product.image}" class="card-img-top product-image" alt="${product.name}" 
+                             onerror="this.src='${getDefaultImage(product.name)}'; this.onerror=null;"
+                             onclick="${!isOutOfStock ? `showProductDetail('${product.id}')` : ''}" 
+                             style="${isOutOfStock ? 'cursor: not-allowed;' : 'cursor: pointer;'}">
+                        ${discountBadge}
+                        ${newBadge}
+                        ${outOfStockBadge}
+                    </div>
+                    <div class="card-body">
+                        <h5 class="product-title" onclick="${!isOutOfStock ? `showProductDetail('${product.id}')` : ''}" 
+                            style="${isOutOfStock ? 'cursor: not-allowed; color: #6c757d;' : 'cursor: pointer;'}">
+                            ${product.name}
+                        </h5>
+                        
+                        ${!isOutOfStock ? `
+                        <div class="d-flex gap-2 mt-3">
+                            <button type="button" class="btn btn-primary flex-grow-1" onclick="addToCart('${product.id}')">
+                                <i class="fas fa-cart-plus me-1"></i> Agregar
+                            </button>
+                        </div>
+                        ` : `
+                        <div class="mt-3">
+                            <button class="btn btn-secondary w-100" disabled>
+                                <i class="fas fa-times-circle me-1"></i> Sin Stock
+                            </button>
+                        </div>
+                        `}
+                    </div>
+                </div>
+            </div>
+        `;
+        container.innerHTML += productCard;
+    });
+}
+
+// Funciones auxiliares para mostrar/ocultar sección de ofertas
+function showOffersSection() {
+    const section = document.getElementById('offers-section');
+    const container = document.getElementById('offers-container');
+    
+    if (section && container) {
+        section.style.display = 'block';
+    }
+}
+
+function hideOffersSection() {
+    const section = document.getElementById('offers-section');
+    if (section) {
+        section.style.display = 'none';
+    }
+}
+
+
+// En tu archivo que carga productos para la vista pública (app.js o similar)
+// Busca la función loadProducts (o similar) y modifícala:
+async function loadProducts(categoryId = null, searchTerm = '') {
+    try {
+        console.log('🔄 Cargando productos...', { categoryId, searchTerm });
+
+        let query = window.supabaseClient.supabase
+            .from('products')
+            .select(`
+                *,
+                categories (name),
+                brands (name)
+            `)
+            .eq('is_active', true); // Solo productos activos
+
+        // Filtro por categoría si se proporciona
+        if (categoryId && categoryId !== 'Todos los Productos') {
+            const category = window.categories.find(c => c.name === categoryId);
+            if (category) {
+                query = query.eq('category_id', category.id);
+            }
+        }
+
+        // Búsqueda por texto
+        if (searchTerm && searchTerm.trim() !== '') {
+            query = query.or(`name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`);
+        }
+
+        // 🔥 ORDENAMIENTO POR OFERTAS Y ORDEN EN CATEGORÍA
+        query = query
+            .order('is_offer', { ascending: false }) // Productos en oferta primero (true > false)
+            .order('category_order', { ascending: true }) // Luego por orden específico
+            .order('name', { ascending: true }); // Finalmente alfabéticamente
+
+        const { data: products, error } = await query;
+
+        if (error) {
+            console.error('❌ Error cargando productos:', error);
+            throw error;
+        }
+
+        console.log(`✅ ${products?.length || 0} productos cargados`);
+        return products || [];
+
+    } catch (error) {
+        console.error('❌ Error en loadProducts:', error);
+        return [];
+    }
+}
 function processProductData(product) {
     try {
         const productImages = processProductImages(product);
@@ -806,7 +1034,9 @@ function processProductData(product) {
             sku: product.sku || '',
             brand: product.brands?.name || '',
             click_count: product.click_count || 0,
-            sold_count: product.sold_count || 0
+            sold_count: product.sold_count || 0,
+            is_offer: product.is_offer || false,  // ← AÑADIR ESTA LÍNEA
+            category_order: product.category_order || 0  // ← También importante para ordenar
         };
     } catch (error) {
         console.error('Error procesando producto:', error);
@@ -956,11 +1186,26 @@ function displayProducts(productsToDisplay = products, title = "Productos") {
 
     if (!section) return;
 
-    currentProducts = productsToDisplay;
+    // 🔥 ORDENAR por oferta y category_order antes de mostrar
+    currentProducts = [...productsToDisplay].sort((a, b) => {
+        if (a.is_offer && !b.is_offer) return -1;
+        if (!a.is_offer && b.is_offer) return 1;
+        
+        const orderA = a.category_order || 0;
+        const orderB = b.category_order || 0;
+        if (orderA !== orderB) return orderA - orderB;
+        
+        return a.name.localeCompare(b.name);
+    });
+    
     currentPage = 1;
 
     section.style.display = 'block';
-    if (sectionTitle) sectionTitle.textContent = title;
+    if (sectionTitle) {
+        const offerCount = currentProducts.filter(p => p.is_offer).length;
+        const offerText = offerCount > 0 ? ` (${offerCount} en oferta)` : '';
+        sectionTitle.textContent = `${title}${offerText}`;
+    }
 
     if (showAllBtn) {
         showAllBtn.style.display = productsToDisplay.length !== products.length ? 'block' : 'none';
@@ -968,12 +1213,6 @@ function displayProducts(productsToDisplay = products, title = "Productos") {
 
     renderCurrentPage();
     scrollToProductsSection();
-    
-    // NO ocultar la sección de productos más vendidos - ELIMINAR ESTAS LÍNEAS:
-    // const mostClickedSection = document.getElementById('most-clicked-section');
-    // const bestSellingSection = document.getElementById('best-selling-section');
-    // if (mostClickedSection) mostClickedSection.style.display = 'none';
-    // if (bestSellingSection) bestSellingSection.style.display = 'none';
 }
 
 function displayProductsPage(productsToDisplay) {
@@ -1005,6 +1244,12 @@ function displayProductsPage(productsToDisplay) {
         const newBadge = product.isNew ?
             `<span class="product-badge" style="background: var(--secondary);">Nuevo</span>` : '';
 
+        // 🔥 BADGE DE OFERTA (color naranja)
+        const offerBadge = product.is_offer ?
+            `<span class="product-badge" style="background: #ff9800; color: white;">
+                <i class="fas fa-tag"></i> Oferta
+            </span>` : '';
+
         const outOfStockBadge = product.stock <= 0 ?
             `<span class="product-badge" style="background: var(--accent);">Sin Stock</span>` : '';
 
@@ -1021,6 +1266,7 @@ function displayProductsPage(productsToDisplay) {
                              onerror="this.src='${getDefaultImage(product.name)}'; this.onerror=null;"
                              onclick="${!isOutOfStock ? `showProductDetail('${product.id}')` : ''}" 
                              style="${isOutOfStock ? 'cursor: not-allowed;' : 'cursor: pointer;'}">
+                        ${offerBadge} <!-- 🔥 Colocar la oferta primero para que sea más visible -->
                         ${discountBadge}
                         ${newBadge}
                         ${outOfStockBadge}
@@ -1070,6 +1316,13 @@ function displayProductsPage(productsToDisplay) {
                         ${product.stock > 0 && product.stock <= 10 ? `
                             <div class="mt-2 text-warning small">
                                 <i class="fas fa-exclamation-triangle"></i> Solo ${product.stock} disponibles
+                            </div>
+                        ` : ''}
+                        
+                        <!-- Indicador de posición en categoría (solo para debug) -->
+                        ${product.category_order > 0 ? `
+                            <div class="mt-1 small text-muted">
+                                <i class="fas fa-sort-numeric-up"></i> Orden: ${product.category_order}
                             </div>
                         ` : ''}
                     </div>
@@ -1163,9 +1416,11 @@ function resetCatalogToHome() {
     // Ocultar secciones específicas
     const mostClickedSection = document.getElementById('most-clicked-section');
     const bestSellingSection = document.getElementById('best-selling-section');
+    const offersSection = document.getElementById('offers-section');
     
     if (mostClickedSection) mostClickedSection.style.display = 'none';
     if (bestSellingSection) bestSellingSection.style.display = 'block';
+    if (offersSection) offersSection.style.display = 'none'; // ← Ocultar ofertas
     
     // Mostrar productos destacados
     loadPopularProducts();
@@ -1193,8 +1448,6 @@ function resetCatalogToHome() {
         top: 0,
         behavior: 'smooth'
     });
-    
-  
 }
 // ============================================
 // FUNCIÓN PARA IR AL INICIO DEL CATÁLOGO
@@ -1214,6 +1467,12 @@ function goToCatalogHome() {
         bestSellingSection.style.display = 'block';
     }
     
+    // Ocultar sección de ofertas
+    const offersSection = document.getElementById('offers-section');
+    if (offersSection) {
+        offersSection.style.display = 'none';
+    }
+    
     // Resetear filtros
     currentCategory = null;
     activeSubcategoryFilters = [];
@@ -1228,9 +1487,8 @@ function goToCatalogHome() {
         top: 0,
         behavior: 'smooth'
     });
-    
-    
 }
+
 function filterByCategory(categoryName) {
     console.log(`Filtrando por categoría: ${categoryName}`);
 
@@ -1280,10 +1538,26 @@ function displayFilteredProductsWithFilters(filteredProducts, categoryName) {
     const sectionTitle = document.getElementById('products-section-title');
 
     if (section) section.style.display = 'block';
-    if (sectionTitle) sectionTitle.textContent = `${categoryName} `;
-
-    currentProducts = filteredProducts;
+    
+    // 🔥 ORDENAR los productos filtrados por oferta primero
+    currentProducts = [...filteredProducts].sort((a, b) => {
+        if (a.is_offer && !b.is_offer) return -1;
+        if (!a.is_offer && b.is_offer) return 1;
+        
+        const orderA = a.category_order || 0;
+        const orderB = b.category_order || 0;
+        if (orderA !== orderB) return orderA - orderB;
+        
+        return a.name.localeCompare(b.name);
+    });
+    
     currentPage = 1;
+
+    if (sectionTitle) {
+        const offerCount = currentProducts.filter(p => p.is_offer).length;
+        const offerText = offerCount > 0 ? ` (${offerCount} en oferta)` : '';
+        sectionTitle.textContent = `${categoryName}${offerText}`;
+    }
 
     renderSubcategoryFilters(categoryName);
     renderCurrentPage();
@@ -1453,6 +1727,21 @@ function applySubcategoryFilters() {
         return price >= priceRange.min && price <= priceRange.max;
     });
 
+    // 🔥 ORDENAR: Productos en oferta primero, luego por orden en categoría, luego por nombre
+    filteredProducts.sort((a, b) => {
+        // 1. Ordenar por oferta (productos en oferta primero)
+        if (a.is_offer && !b.is_offer) return -1;
+        if (!a.is_offer && b.is_offer) return 1;
+        
+        // 2. Si ambos tienen oferta o no la tienen, ordenar por category_order
+        const orderA = a.category_order || 0;
+        const orderB = b.category_order || 0;
+        if (orderA !== orderB) return orderA - orderB;
+        
+        // 3. Si tienen el mismo order, ordenar alfabéticamente
+        return a.name.localeCompare(b.name);
+    });
+
     const sectionTitle = document.getElementById('products-section-title');
     if (sectionTitle) {
         const filterText = activeSubcategoryFilters.length > 0 ?
@@ -1460,7 +1749,11 @@ function applySubcategoryFilters() {
         const priceText = (priceRange.min > 0 || priceRange.max < Infinity) ?
             ` - Precio: $${priceRange.min.toLocaleString('es-AR')} - $${priceRange.max === Infinity ? '∞' : priceRange.max.toLocaleString('es-AR')}` : '';
 
-        sectionTitle.textContent = `${currentCategory} (${filteredProducts.length} productos)${filterText}${priceText}`;
+        // Agregar indicador de ofertas
+        const offerCount = filteredProducts.filter(p => p.is_offer).length;
+        const offerText = offerCount > 0 ? ` (${offerCount} en oferta)` : '';
+        
+        sectionTitle.textContent = `${currentCategory} (${filteredProducts.length} productos)${offerText}${filterText}${priceText}`;
     }
 
     currentProducts = filteredProducts;
@@ -1550,10 +1843,26 @@ function showAllProducts() {
     const sectionTitle = document.getElementById('products-section-title');
     
     if (section) section.style.display = 'block';
-    if (sectionTitle) sectionTitle.textContent = "Todos los Productos";
     
-    currentProducts = products;
+    // 🔥 ORDENAR todos los productos por oferta primero
+    currentProducts = [...products].sort((a, b) => {
+        if (a.is_offer && !b.is_offer) return -1;
+        if (!a.is_offer && b.is_offer) return 1;
+        
+        const orderA = a.category_order || 0;
+        const orderB = b.category_order || 0;
+        if (orderA !== orderB) return orderA - orderB;
+        
+        return a.name.localeCompare(b.name);
+    });
+    
     currentPage = 1;
+    
+    if (sectionTitle) {
+        const offerCount = currentProducts.filter(p => p.is_offer).length;
+        const offerText = offerCount > 0 ? ` (${offerCount} en oferta)` : '';
+        sectionTitle.textContent = `Todos los Productos${offerText}`;
+    }
     
     // Renderizar directamente
     const productsContainer = document.getElementById('products-container');
@@ -1595,6 +1904,7 @@ function showAllProducts() {
         scrollToProductsSection();
     }, 300);
 }
+
 function setupPagination() {
     const perPageSelect = document.getElementById('products-per-page');
     if (perPageSelect) {
@@ -1943,7 +2253,19 @@ function initializeEnhancedZoom() {
         if (zoomLens) zoomLens.style.display = 'none';
         if (zoomWindow) zoomWindow.style.display = 'none';
     } else {
-        setupDesktopZoom();
+        // OBTENER LOS ELEMENTOS NECESARIOS ANTES DE LLAMAR A setupDesktopZoom
+        const wrapper = document.getElementById('imageZoomWrapper');
+        const image = document.getElementById('detailMainImage');
+        const lens = document.getElementById('zoomLens');
+        const zoomWindow = document.getElementById('zoomWindow');
+        const zoomWindowImage = document.getElementById('zoomWindowImage');
+        
+        // Verificar que todos los elementos existen antes de proceder
+        if (wrapper && image && lens && zoomWindow && zoomWindowImage) {
+            setupDesktopZoom(wrapper, image, lens, zoomWindow, zoomWindowImage);
+        } else {
+            console.warn('⚠️ Elementos de zoom no encontrados, saltando configuración');
+        }
     }
 }
 
@@ -2076,76 +2398,98 @@ function setupModernZoom() {
 }
 
 function setupDesktopZoom(wrapper, image, lens, zoomWindow, zoomWindowImage) {
+    // Verificar que todos los elementos existen
+    if (!wrapper || !image || !lens || !zoomWindow || !zoomWindowImage) {
+        console.error('❌ Error: Elementos de zoom no encontrados');
+        return;
+    }
+
     let isMouseOver = false;
     let mouseX = 0;
     let mouseY = 0;
 
-    zoomWindowImage.src = image.src;
+    // Solo asignar src si zoomWindowImage existe
+    if (zoomWindowImage && image) {
+        zoomWindowImage.src = image.src || '';
+    }
 
-    wrapper.addEventListener('mouseenter', () => {
-        isMouseOver = true;
-        wrapper.classList.add('zooming');
-        lens.style.display = 'block';
-        zoomWindow.style.display = 'block';
-    });
+    // Configurar eventos solo si los elementos existen
+    if (wrapper) {
+        wrapper.addEventListener('mouseenter', () => {
+            isMouseOver = true;
+            wrapper.classList.add('zooming');
+            if (lens) lens.style.display = 'block';
+            if (zoomWindow) zoomWindow.style.display = 'block';
+        });
 
-    wrapper.addEventListener('mouseleave', () => {
-        isMouseOver = false;
-        wrapper.classList.remove('zooming');
-        lens.style.display = 'none';
-        zoomWindow.style.display = 'none';
-    });
+        wrapper.addEventListener('mouseleave', () => {
+            isMouseOver = false;
+            wrapper.classList.remove('zooming');
+            if (lens) lens.style.display = 'none';
+            if (zoomWindow) zoomWindow.style.display = 'none';
+        });
 
-    wrapper.addEventListener('mousemove', (e) => {
-        if (!isMouseOver) return;
+        wrapper.addEventListener('mousemove', (e) => {
+            if (!isMouseOver) return;
 
-        const rect = wrapper.getBoundingClientRect();
-        mouseX = e.clientX - rect.left;
-        mouseY = e.clientY - rect.top;
+            const rect = wrapper.getBoundingClientRect();
+            mouseX = e.clientX - rect.left;
+            mouseY = e.clientY - rect.top;
 
-        const lensSize = 150;
-        let lensX = mouseX - lensSize / 2;
-        let lensY = mouseY - lensSize / 2;
+            const lensSize = 150;
+            let lensX = mouseX - lensSize / 2;
+            let lensY = mouseY - lensSize / 2;
 
-        lensX = Math.max(0, Math.min(lensX, rect.width - lensSize));
-        lensY = Math.max(0, Math.min(lensY, rect.height - lensSize));
+            lensX = Math.max(0, Math.min(lensX, rect.width - lensSize));
+            lensY = Math.max(0, Math.min(lensY, rect.height - lensSize));
 
-        lens.style.left = `${lensX}px`;
-        lens.style.top = `${lensY}px`;
+            if (lens) {
+                lens.style.left = `${lensX}px`;
+                lens.style.top = `${lensY}px`;
+            }
 
-        const zoomX = (lensX / (rect.width - lensSize)) * (image.naturalWidth - zoomWindow.clientWidth);
-        const zoomY = (lensY / (rect.height - lensSize)) * (image.naturalHeight - zoomWindow.clientHeight);
+            const zoomX = (lensX / (rect.width - lensSize)) * (image.naturalWidth - zoomWindow.clientWidth);
+            const zoomY = (lensY / (rect.height - lensSize)) * (image.naturalHeight - zoomWindow.clientHeight);
 
-        zoomWindow.style.left = `${rect.right + 20}px`;
-        zoomWindow.style.top = `${rect.top}px`;
+            if (zoomWindow) {
+                zoomWindow.style.left = `${rect.right + 20}px`;
+                zoomWindow.style.top = `${rect.top}px`;
+            }
 
-        zoomWindowImage.style.transform = `translate(-${zoomX}px, -${zoomY}px) scale(${maxZoom})`;
-    });
+            if (zoomWindowImage) {
+                zoomWindowImage.style.transform = `translate(-${zoomX}px, -${zoomY}px) scale(${maxZoom})`;
+            }
+        });
 
-    wrapper.addEventListener('wheel', (e) => {
-        e.preventDefault();
+        wrapper.addEventListener('wheel', (e) => {
+            e.preventDefault();
 
-        const rect = wrapper.getBoundingClientRect();
-        const delta = e.deltaY > 0 ? -0.1 : 0.1;
+            const rect = wrapper.getBoundingClientRect();
+            const delta = e.deltaY > 0 ? -0.1 : 0.1;
 
-        zoomScale = Math.max(minZoom, Math.min(maxZoom, zoomScale + delta));
-        image.style.transform = `scale(${zoomScale})`;
+            zoomScale = Math.max(minZoom, Math.min(maxZoom, zoomScale + delta));
+            if (image) {
+                image.style.transform = `scale(${zoomScale})`;
 
-        if (zoomScale > 1) {
-            const x = (mouseX / rect.width) * 100;
-            const y = (mouseY / rect.height) * 100;
-            image.style.transformOrigin = `${x}% ${y}%`;
-        } else {
-            image.style.transformOrigin = 'center center';
-        }
-    });
+                if (zoomScale > 1) {
+                    const x = (mouseX / rect.width) * 100;
+                    const y = (mouseY / rect.height) * 100;
+                    image.style.transformOrigin = `${x}% ${y}%`;
+                } else {
+                    image.style.transformOrigin = 'center center';
+                }
+            }
+        });
 
-    wrapper.addEventListener('dblclick', (e) => {
-        e.preventDefault();
-        zoomScale = 1;
-        image.style.transform = `scale(${zoomScale})`;
-        image.style.transformOrigin = 'center center';
-    });
+        wrapper.addEventListener('dblclick', (e) => {
+            e.preventDefault();
+            zoomScale = 1;
+            if (image) {
+                image.style.transform = `scale(${zoomScale})`;
+                image.style.transformOrigin = 'center center';
+            }
+        });
+    }
 }
 
 // ============================================
