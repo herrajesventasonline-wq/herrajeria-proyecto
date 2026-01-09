@@ -6,8 +6,8 @@ const SUPABASE_URL = window.SUPABASE_URL || 'https://opueqifkagoonpbubflj.supaba
 const SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || '';
 
 // Configuración segura
-const isProduction = window.location.hostname !== 'localhost' && 
-                     window.location.hostname !== '127.0.0.1';
+const isProduction = window.location.hostname !== 'localhost' &&
+    window.location.hostname !== '127.0.0.1';
 
 console.log('🔐 Modo producción:', isProduction);
 
@@ -19,7 +19,7 @@ let supabaseClient = null;
 async function getUserOrders(email) {
     try {
         console.log(`📋 Buscando pedidos para: ${email}`);
-        
+
         if (!email || email.trim() === '') {
             console.log('❌ Email no proporcionado');
             return [];
@@ -165,12 +165,12 @@ async function initializeSupabase() {
         window.supabaseClient = {
             // Cliente base
             client: supabaseClient,
-            
+
             // Funciones principales
             getProducts: getProducts,
             createOrder: createOrder,
             getUserOrders: getUserOrders,  // ¡NUEVA FUNCIÓN AGREGADA!
-            
+
             // Función de prueba
             testConnection: async () => {
                 try {
@@ -178,14 +178,14 @@ async function initializeSupabase() {
                         .from('products')
                         .select('id')
                         .limit(1);
-                    
+
                     if (error) throw error;
                     return { success: true, message: 'Conectado a Supabase' };
                 } catch (error) {
                     return { success: false, message: error.message };
                 }
             },
-            
+
             isReady: true
         };
 
