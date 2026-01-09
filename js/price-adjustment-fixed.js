@@ -1,4 +1,4 @@
-// price-adjustment-fixed.js - Versión funcional completa
+// price-adjustment-fixed.js - Versión funcional completa CON OPCIONES DE CATEGORÍA
 console.log('💰 Iniciando sistema de ajuste de precios...');
 
 // Variables globales
@@ -23,6 +23,9 @@ function showPriceAdjustmentModal() {
     // Resetear formulario
     resetPriceAdjustmentForm();
 
+    // Cargar categorías en el select
+    loadAdjustmentCategories();
+
     // Mostrar modal
     modal.style.display = 'flex';
     modal.classList.add('active');
@@ -30,6 +33,70 @@ function showPriceAdjustmentModal() {
     document.body.style.overflow = 'hidden';
 
     console.log('✅ Modal visible:', modal.style.display, modal.classList);
+}
+
+// Función para cargar categorías en el select de ajuste
+function loadAdjustmentCategories() {
+    console.log('📂 Cargando categorías para ajuste de precios...');
+
+    const categorySelect = document.getElementById('adjustment-category');
+    if (!categorySelect) {
+        console.error('❌ No se encontró el select de categorías para ajuste');
+        return;
+    }
+
+    // Guardar la opción por defecto
+    const defaultOption = '<option value="">Seleccionar categoría</option>';
+
+    // Verificar si ya tenemos las categorías cargadas
+    if (window.allCategories && Array.isArray(window.allCategories) && window.allCategories.length > 0) {
+        console.log(`✅ Cargando ${window.allCategories.length} categorías desde variable global`);
+
+        // Ordenar categorías alfabéticamente
+        const sortedCategories = [...window.allCategories].sort((a, b) =>
+            (a.name || '').localeCompare(b.name || '')
+        );
+
+        categorySelect.innerHTML = defaultOption + sortedCategories.map(cat =>
+            `<option value="${cat.id}">${cat.name || 'Sin nombre'}</option>`
+        ).join('');
+
+        console.log(`✅ ${sortedCategories.length} categorías cargadas en el select`);
+    } else {
+        // Intentar cargar categorías desde Supabase
+        console.log('🔄 Categorías no disponibles en memoria, intentando cargar desde Supabase...');
+
+        if (window.supabaseClient && typeof window.supabaseClient.getCategories === 'function') {
+            window.supabaseClient.getCategories()
+                .then(categories => {
+                    if (categories && Array.isArray(categories)) {
+                        console.log(`✅ ${categories.length} categorías cargadas desde Supabase`);
+
+                        // Guardar en variable global para uso futuro
+                        window.allCategories = categories;
+
+                        // Ordenar categorías alfabéticamente
+                        const sortedCategories = [...categories].sort((a, b) =>
+                            (a.name || '').localeCompare(b.name || '')
+                        );
+
+                        categorySelect.innerHTML = defaultOption + sortedCategories.map(cat =>
+                            `<option value="${cat.id}">${cat.name || 'Sin nombre'}</option>`
+                        ).join('');
+                    } else {
+                        console.warn('⚠️ No se pudieron cargar categorías');
+                        categorySelect.innerHTML = defaultOption;
+                    }
+                })
+                .catch(error => {
+                    console.error('❌ Error cargando categorías:', error);
+                    categorySelect.innerHTML = defaultOption;
+                });
+        } else {
+            console.warn('⚠️ Supabase client no disponible para cargar categorías');
+            categorySelect.innerHTML = defaultOption;
+        }
+    }
 }
 
 // Función para ocultar el modal
@@ -52,11 +119,9 @@ function resetPriceAdjustmentForm() {
 
     // Ocultar campos condicionales
     const categoryField = document.getElementById('category-field');
-    const brandField = document.getElementById('brand-field');
     const previewSection = document.getElementById('preview-section');
 
     if (categoryField) categoryField.style.display = 'none';
-    if (brandField) brandField.style.display = 'none';
     if (previewSection) previewSection.style.display = 'none';
 
     // Resetear estado
@@ -99,13 +164,18 @@ function setupPriceAdjustmentModal() {
         applyToSelect.addEventListener('change', function () {
             const value = this.value;
             const categoryField = document.getElementById('category-field');
-            const brandField = document.getElementById('brand-field');
 
+            // Mostrar/ocultar campo de categoría según la selección
             if (categoryField) {
-                categoryField.style.display = value === 'category' ? 'block' : 'none';
-            }
-            if (brandField) {
-                brandField.style.display = value === 'brand' ? 'block' : 'none';
+                if (value === 'category') {
+                    categoryField.style.display = 'block';
+                    // Asegurarse de que las categorías estén cargadas
+                    if (categoryField.querySelector('select').options.length <= 1) {
+                        loadAdjustmentCategories();
+                    }
+                } else {
+                    categoryField.style.display = 'none';
+                }
             }
 
             updatePreview();
@@ -124,6 +194,12 @@ function setupPriceAdjustmentModal() {
             }
             updatePreview();
         });
+    }
+
+    // Configurar cambio en categoría seleccionada
+    const categorySelect = document.getElementById('adjustment-category');
+    if (categorySelect) {
+        categorySelect.addEventListener('change', updatePreview);
     }
 
     // Configurar inputs para actualizar vista previa
@@ -145,7 +221,7 @@ function setupPriceAdjustmentModal() {
     console.log('✅ Modal configurado');
 }
 
-// Actualizar vista previa
+// Actualizar vista previa - VERSIÓN MODIFICADA PARA CATEGORÍAS
 function updatePreview() {
     const applyTo = document.getElementById('apply-to')?.value;
     const adjustmentType = document.getElementById('adjustment-type')?.value;
@@ -153,6 +229,7 @@ function updatePreview() {
     const value = parseFloat(document.getElementById('adjustment-value')?.value || 0);
     const adjustWholesale = document.getElementById('adjust-wholesale')?.checked;
     const adjustRetail = document.getElementById('adjust-retail')?.checked;
+    const categoryId = applyTo === 'category' ? document.getElementById('adjustment-category')?.value : null;
 
     const previewSection = document.getElementById('preview-section');
     const previewDetails = document.getElementById('preview-details');
@@ -166,6 +243,12 @@ function updatePreview() {
         return;
     }
 
+    // Validar categoría si se seleccionó "Por Categoría"
+    if (applyTo === 'category' && !categoryId) {
+        previewSection.style.display = 'none';
+        return;
+    }
+
     // Calcular productos afectados
     let productsCount = 0;
     let targetDescription = '';
@@ -173,39 +256,26 @@ function updatePreview() {
     if (window.adminProducts && window.adminProducts.length > 0) {
         switch (applyTo) {
             case 'all':
-                productsCount = window.adminProducts.filter(p => p.is_active).length;
-                targetDescription = 'Todos los productos';
+                productsCount = window.adminProducts.filter(p => p.is_active !== false).length;
+                targetDescription = 'Todos los productos activos';
                 break;
 
             case 'category':
-                const categoryId = document.getElementById('adjustment-category')?.value;
                 if (!categoryId) {
                     previewSection.style.display = 'none';
                     return;
                 }
                 productsCount = window.adminProducts.filter(p =>
-                    p.category_id === categoryId && p.is_active
+                    p.category_id === categoryId && (p.is_active !== false)
                 ).length;
-                const categoryName = document.querySelector(`#adjustment-category option[value="${categoryId}"]`)?.textContent || 'Categoría';
-                targetDescription = `Categoría: ${categoryName}`;
-                break;
 
-            case 'brand':
-                const brandId = document.getElementById('adjustment-brand')?.value;
-                if (!brandId) {
-                    previewSection.style.display = 'none';
-                    return;
+                // Obtener nombre de la categoría seleccionada
+                const categorySelect = document.getElementById('adjustment-category');
+                let categoryName = 'Categoría seleccionada';
+                if (categorySelect && categorySelect.selectedIndex > 0) {
+                    categoryName = categorySelect.options[categorySelect.selectedIndex].text;
                 }
-                productsCount = window.adminProducts.filter(p =>
-                    p.brand_id === brandId && p.is_active
-                ).length;
-                const brandName = document.querySelector(`#adjustment-brand option[value="${brandId}"]`)?.textContent || 'Marca';
-                targetDescription = `Marca: ${brandName}`;
-                break;
-
-            case 'selected':
-                productsCount = priceAdjustmentState.selectedProducts.length;
-                targetDescription = `Productos seleccionados: ${productsCount}`;
+                targetDescription = `Categoría: ${categoryName}`;
                 break;
         }
     }
@@ -220,34 +290,36 @@ function updatePreview() {
     if (adjustWholesale) priceTypes.push('Mayorista');
     if (adjustRetail) priceTypes.push('Minorista');
 
-    let exampleText = '';
-
+    let adjustmentText = '';
     if (adjustmentType === 'percentage') {
         const percentageText = operation === 'increase' ? `+${value}%` : `-${value}%`;
-        exampleText = `
-            <div><strong>Ajuste:</strong> ${percentageText}</div>
-            <div><strong>Aplicado a:</strong> ${targetDescription}</div>
-            <div><strong>Precios afectados:</strong> ${priceTypes.join(' y ')}</div>
-            <div><strong>Productos afectados:</strong> ${productsCount}</div>
-        `;
+        adjustmentText = `Ajuste: ${percentageText}`;
     } else {
         const amountText = operation === 'increase' ? `+$${value.toFixed(2)}` : `-$${value.toFixed(2)}`;
-        exampleText = `
-            <div><strong>Ajuste:</strong> ${amountText}</div>
-            <div><strong>Aplicado a:</strong> ${targetDescription}</div>
-            <div><strong>Precios afectados:</strong> ${priceTypes.join(' y ')}</div>
-            <div><strong>Productos afectados:</strong> ${productsCount}</div>
-        `;
+        adjustmentText = `Ajuste: ${amountText}`;
     }
 
-    previewDetails.innerHTML = exampleText;
+    const previewHTML = `
+        <div class="preview-detail-item">
+            <strong>${adjustmentText}</strong>
+        </div>
+        <div class="preview-detail-item">
+            <strong>Aplicado a:</strong> ${targetDescription}
+        </div>
+        <div class="preview-detail-item">
+            <strong>Precios afectados:</strong> ${priceTypes.join(', ')}
+        </div>
+        <div class="preview-detail-item">
+            <strong>Operación:</strong> ${operation === 'increase' ? 'Aumentar' : 'Disminuir'}
+        </div>
+    `;
+
+    previewDetails.innerHTML = previewHTML;
     affectedProducts.textContent = productsCount;
     previewSection.style.display = 'block';
 }
 
-// Manejar envío del formulario - VERSIÓN CORREGIDA
-// price-adjustment-fixed.js - Reemplaza la función handlePriceAdjustmentSubmit completa con esta:
-
+// Manejar envío del formulario
 async function handlePriceAdjustmentSubmit(e) {
     e.preventDefault();
     console.log('🔄 Procesando ajuste de precios...');
@@ -272,7 +344,7 @@ async function handlePriceAdjustmentSubmit(e) {
         // Validar
         const validation = validatePriceAdjustmentForm(formData);
         if (!validation.valid) {
-            alert(validation.message);
+            showNotification(validation.message, 'error');
             throw new Error(validation.message);
         }
 
@@ -280,13 +352,21 @@ async function handlePriceAdjustmentSubmit(e) {
         const productsToAdjust = await getProductsToAdjust(formData);
 
         if (productsToAdjust.length === 0) {
-            alert('No hay productos para ajustar con los criterios seleccionados.');
+            showNotification('No hay productos para ajustar con los criterios seleccionados.', 'warning');
             throw new Error('No hay productos para ajustar');
         }
 
         // Mostrar confirmación con detalles
         const confirmationText = getConfirmationText(formData, productsToAdjust.length);
-        const confirmed = confirm(`¿Está seguro de aplicar este ajuste de precios a ${productsToAdjust.length} productos?\n\n${confirmationText}\n\nEsta acción no se puede deshacer.`);
+
+        const confirmed = await showConfirmation({
+            title: 'Confirmar Ajuste Masivo de Precios',
+            message: `¿Está seguro de aplicar este ajuste de precios a ${productsToAdjust.length} productos?`,
+            details: confirmationText,
+            confirmText: 'Aplicar Ajuste',
+            cancelText: 'Cancelar',
+            confirmColor: 'warning'
+        });
 
         if (!confirmed) {
             throw new Error('Ajuste cancelado por el usuario');
@@ -312,16 +392,13 @@ async function handlePriceAdjustmentSubmit(e) {
                 operation: formData.operation,
                 adjustment_type: formData.adjustment_type,
                 apply_to: formData.apply_to,
-                target_category: formData.category || null,
-                target_brand: formData.brand || null
+                target_category: formData.category || null
             })
         };
 
-        // Solo agregar target_id si es necesario (para categoría o marca)
+        // Solo agregar target_id si es por categoría
         if (formData.apply_to === 'category' && formData.category) {
             adjustmentRecord.target_id = formData.category;
-        } else if (formData.apply_to === 'brand' && formData.brand) {
-            adjustmentRecord.target_id = formData.brand;
         }
 
         console.log('📝 Insertando registro de ajuste:', adjustmentRecord);
@@ -355,6 +432,7 @@ async function handlePriceAdjustmentSubmit(e) {
                 };
 
                 // Calcular y aplicar ajustes
+                // Calcular y aplicar ajustes
                 if (formData.adjust_wholesale) {
                     const newWholesalePrice = calculateNewPrice(
                         product.wholesale_price,
@@ -365,6 +443,15 @@ async function handlePriceAdjustmentSubmit(e) {
 
                     if (newWholesalePrice !== product.wholesale_price) {
                         updateData.wholesale_price = newWholesalePrice;
+
+                        // IMPORTANTE: Recalcular el porcentaje mayorista basado en el nuevo precio y el costo
+                        const cost = parseFloat(product.cost_price) || 0;
+                        let newWholesalePercentage = 100; // valor por defecto
+                        if (cost > 0) {
+                            newWholesalePercentage = (newWholesalePrice / cost) * 100;
+                        }
+                        updateData.wholesale_percentage = newWholesalePercentage;
+
                         detailRecord.new_wholesale_price = newWholesalePrice;
                     }
                 }
@@ -379,10 +466,23 @@ async function handlePriceAdjustmentSubmit(e) {
 
                     if (newRetailPrice !== product.retail_price) {
                         updateData.retail_price = newRetailPrice;
+
+                        // IMPORTANTE: Recalcular el porcentaje minorista basado en el nuevo precio y el costo
+                        const cost = parseFloat(product.cost_price) || 0;
+                        let newRetailPercentage = 150; // valor por defecto
+                        if (cost > 0) {
+                            newRetailPercentage = (newRetailPrice / cost) * 100;
+                        }
+                        updateData.retail_percentage = newRetailPercentage;
+
                         detailRecord.new_retail_price = newRetailPrice;
                     }
                 }
 
+                // También actualizar el campo para indicar que no use porcentajes globales
+                if (formData.adjust_wholesale || formData.adjust_retail) {
+                    updateData.use_global_percentages = false;
+                }
                 // Si hay cambios, actualizar el producto
                 if (Object.keys(updateData).length > 0) {
                     const { error: updateError } = await window.supabaseClient.client
@@ -423,83 +523,67 @@ async function handlePriceAdjustmentSubmit(e) {
             console.log(`✅ ${adjustmentDetails.length} detalles de ajuste guardados`);
         }
 
-        // Mostrar resumen final
-        console.log(`✅ Ajuste completado. ${updatedProducts.length} productos actualizados de ${productsToAdjust.length} procesados.`);
+        // Mostrar resultado
+        if (updatedProducts.length > 0) {
+            showNotification(`✅ Ajuste aplicado a ${updatedProducts.length} productos correctamente`, 'success');
 
-        // Mostrar mensaje de éxito
-        alert(`✅ Ajuste de precios aplicado exitosamente\n\n• Productos afectados: ${updatedProducts.length}\n• Ajuste aplicado: ${getConfirmationText(formData, updatedProducts.length)}`);
+            // Cerrar modal
+            hidePriceAdjustmentModal();
 
-             // Cerrar modal
-        hidePriceAdjustmentModal();
-
-        console.log('🔄 Actualizando interfaz de usuario...');
-        
-        // Actualizar productos inmediatamente
-        if (window.adminProducts && updatedProducts.length > 0) {
-            // Actualizar los precios en memoria para reflejar cambios inmediatos
-            updatedProducts.forEach(productId => {
-                const product = adminProducts.find(p => p.id === productId);
-                if (product) {
-                    if (formData.adjust_wholesale) {
-                        product.wholesale_price = calculateNewPrice(
-                            product.wholesale_price,
-                            formData.adjustment_type,
-                            formData.operation,
-                            formData.adjustment_value
-                        );
+            // Actualizar productos en memoria
+            if (window.adminProducts && updatedProducts.length > 0) {
+                updatedProducts.forEach(productId => {
+                    const productIndex = window.adminProducts.findIndex(p => p.id === productId);
+                    if (productIndex !== -1) {
+                        const product = window.adminProducts[productIndex];
+                        if (formData.adjust_wholesale) {
+                            product.wholesale_price = calculateNewPrice(
+                                product.wholesale_price,
+                                formData.adjustment_type,
+                                formData.operation,
+                                formData.adjustment_value
+                            );
+                        }
+                        if (formData.adjust_retail) {
+                            product.retail_price = calculateNewPrice(
+                                product.retail_price,
+                                formData.adjustment_type,
+                                formData.operation,
+                                formData.adjustment_value
+                            );
+                        }
                     }
-                    if (formData.adjust_retail) {
-                        product.retail_price = calculateNewPrice(
-                            product.retail_price,
-                            formData.adjustment_type,
-                            formData.operation,
-                            formData.adjustment_value
-                        );
-                    }
-                }
-            });
-            
-            // Forzar actualización de la UI
-            window.adminProducts = adminProducts;
-        }
-
-        // Recargar datos desde la base de datos
-        setTimeout(() => {
-            if (typeof window.reloadAdminProducts === 'function') {
-                window.reloadAdminProducts();
-            } else if (typeof window.loadAdminData === 'function') {
-                window.loadAdminData();
-            } else {
-                window.location.reload();
+                });
             }
-        }, 500);
+
+            // Recargar productos en la interfaz
+            setTimeout(() => {
+                if (typeof window.reloadAdminProducts === 'function') {
+                    window.reloadAdminProducts();
+                } else if (typeof window.loadAdminData === 'function') {
+                    window.loadAdminData();
+                }
+            }, 500);
+        } else {
+            showNotification('⚠️ No se actualizó ningún producto', 'warning');
+        }
 
     } catch (error) {
         console.error('❌ Error en ajuste de precios:', error);
         if (error.message !== 'Ajuste cancelado por el usuario') {
-            alert(`❌ Error: ${error.message}`);
+            showNotification(`Error: ${error.message}`, 'error');
         }
     } finally {
         submitBtn.disabled = false;
-        submitBtn.innerHTML = originalText;
+        submitBtn.innerHTML = '<i class="fas fa-percentage"></i> Aplicar Ajuste';
     }
 }
-// Función para validar UUID (agrega esta función cerca de las otras funciones de utilidad)
-function isValidUUID(uuid) {
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    return uuidRegex.test(uuid);
-}
+
 // Función para obtener productos según el criterio
-// REEMPLAZA la función getProductsToAdjust completa con esta:
 async function getProductsToAdjust(formData) {
     console.log('🔍 Obteniendo productos para ajustar...');
-    
-    try {
-        // Si se seleccionaron productos específicos
-        if (formData.apply_to === 'selected') {
-            return priceAdjustmentState.selectedProducts || [];
-        }
 
+    try {
         // Para otros casos, obtener de la base de datos
         let query = window.supabaseClient.client
             .from('products')
@@ -514,14 +598,11 @@ async function getProductsToAdjust(formData) {
         if (formData.apply_to === 'category' && formData.category) {
             query = query.eq('category_id', formData.category);
             console.log(`📂 Filtrando por categoría: ${formData.category}`);
-        } else if (formData.apply_to === 'brand' && formData.brand) {
-            query = query.eq('brand_id', formData.brand);
-            console.log(`🏷️ Filtrando por marca: ${formData.brand}`);
         }
         // Para 'all' no aplicamos filtros adicionales
 
         const { data, error } = await query;
-        
+
         if (error) {
             console.error('❌ Error obteniendo productos:', error);
             throw error;
@@ -537,13 +618,12 @@ async function getProductsToAdjust(formData) {
 }
 
 // Calcular nuevo precio
-// REEMPLAZA la función calculateNewPrice con esta versión mejorada:
 function calculateNewPrice(oldPrice, adjustmentType, operation, value) {
     console.log(`🧮 Calculando nuevo precio: old=${oldPrice}, type=${adjustmentType}, op=${operation}, value=${value}`);
-    
+
     let numericPrice = parseFloat(oldPrice) || 0;
     let newPrice = numericPrice;
-    
+
     if (adjustmentType === 'percentage') {
         const percentage = value / 100;
         if (operation === 'increase') {
@@ -558,27 +638,29 @@ function calculateNewPrice(oldPrice, adjustmentType, operation, value) {
             newPrice = numericPrice - value;
         }
     }
-    
+
     // Asegurar que no sea negativo
     newPrice = Math.max(0, newPrice);
-    
+
     // Redondear a 2 decimales
     newPrice = Math.round(newPrice * 100) / 100;
-    
+
     console.log(`✅ Nuevo precio calculado: ${newPrice}`);
     return newPrice;
 }
 
 function getPriceAdjustmentFormData() {
+    const applyTo = document.getElementById('apply-to').value;
+    const categoryId = applyTo === 'category' ? document.getElementById('adjustment-category').value : null;
+
     return {
         adjustment_type: document.getElementById('adjustment-type').value,
-        adjustment_value: parseFloat(document.getElementById('adjustment-value').value),
+        adjustment_value: parseFloat(document.getElementById('adjustment-value').value) || 0,
         operation: document.getElementById('adjustment-operation').value,
-        apply_to: document.getElementById('apply-to').value,
+        apply_to: applyTo,
         adjust_wholesale: document.getElementById('adjust-wholesale').checked,
         adjust_retail: document.getElementById('adjust-retail').checked,
-        category: document.getElementById('adjustment-category')?.value,
-        brand: document.getElementById('adjustment-brand')?.value
+        category: categoryId
     };
 }
 
@@ -603,25 +685,19 @@ function validatePriceAdjustmentForm(data) {
         return { valid: false, message: 'Seleccione una categoría' };
     }
 
-    if (data.apply_to === 'brand' && !data.brand) {
-        return { valid: false, message: 'Seleccione una marca' };
-    }
-
     return { valid: true, message: '' };
 }
 
-// price-adjustment-fixed.js - Agrega esta función después de getConfirmationText
-
 function getConfirmationText(formData, productCount) {
     const operationText = formData.operation === 'increase' ? 'Aumento' : 'Disminución';
-    const typeText = formData.adjustment_type === 'percentage' ? 
-        `${formData.adjustment_value}%` : 
+    const typeText = formData.adjustment_type === 'percentage' ?
+        `${formData.adjustment_value}%` :
         `$${formData.adjustment_value}`;
-    
+
     const priceTypes = [];
     if (formData.adjust_wholesale) priceTypes.push('Precio Mayorista');
     if (formData.adjust_retail) priceTypes.push('Precio Minorista');
-    
+
     let applyToText = '';
     switch (formData.apply_to) {
         case 'all':
@@ -632,17 +708,23 @@ function getConfirmationText(formData, productCount) {
             const categoryName = categorySelect?.options[categorySelect.selectedIndex]?.text || 'Categoría seleccionada';
             applyToText = `Categoría: ${categoryName}`;
             break;
-        case 'brand':
-            const brandSelect = document.getElementById('adjustment-brand');
-            const brandName = brandSelect?.options[brandSelect.selectedIndex]?.text || 'Marca seleccionada';
-            applyToText = `Marca: ${brandName}`;
-            break;
-        case 'selected':
-            applyToText = 'Productos seleccionados';
-            break;
     }
-    
-    return `${operationText} de ${typeText}\nPrecios afectados: ${priceTypes.join(', ')}\nAplicado a: ${applyToText}\nProductos afectados: ${productCount}`;
+
+    return `
+        <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin: 10px 0;">
+            <strong>Resumen del ajuste:</strong>
+            <div style="margin-top: 8px;">
+                <div><strong>Tipo:</strong> ${operationText} de ${typeText}</div>
+                <div><strong>Precios afectados:</strong> ${priceTypes.join(', ')}</div>
+                <div><strong>Aplicado a:</strong> ${applyToText}</div>
+                <div><strong>Productos afectados:</strong> ${productCount}</div>
+            </div>
+            <div style="margin-top: 10px; padding: 8px; background: #fef3c7; border-radius: 4px; border-left: 4px solid #f59e0b;">
+                <i class="fas fa-exclamation-triangle" style="color: #f59e0b;"></i>
+                <strong> Esta acción no se puede deshacer.</strong>
+            </div>
+        </div>
+    `;
 }
 
 // Inicialización
@@ -653,38 +735,12 @@ function initializePriceAdjustmentSystem() {
         // Configurar modal
         setupPriceAdjustmentModal();
 
-        // Cargar datos en los selectores
-        setTimeout(() => {
-            loadAdjustmentSelects();
-            console.log('✅ Sistema de ajuste de precios inicializado');
-        }, 1000);
+        console.log('✅ Sistema de ajuste de precios inicializado');
 
     } catch (error) {
         console.error('❌ Error inicializando sistema:', error);
     }
 }
-
-// Cargar selectores
-function loadAdjustmentSelects() {
-    console.log('📋 Cargando selectores...');
-
-    // Cargar categorías
-    const categorySelect = document.getElementById('adjustment-category');
-    if (categorySelect && window.allCategories && window.allCategories.length > 0) {
-        categorySelect.innerHTML = '<option value="">Seleccionar categoría</option>' +
-            window.allCategories.map(cat => `<option value="${cat.id}">${cat.name}</option>`).join('');
-        console.log(`✅ ${window.allCategories.length} categorías cargadas`);
-    }
-
-    // Cargar marcas
-    const brandSelect = document.getElementById('adjustment-brand');
-    if (brandSelect && window.allBrands && window.allBrands.length > 0) {
-        brandSelect.innerHTML = '<option value="">Seleccionar marca</option>' +
-            window.allBrands.map(brand => `<option value="${brand.id}">${brand.name}</option>`).join('');
-        console.log(`✅ ${window.allBrands.length} marcas cargadas`);
-    }
-}
-// price-adjustment-fixed.js - Agrega esta función después de las variables globales
 
 // Verificar que Supabase esté listo
 function waitForSupabase() {
@@ -701,7 +757,6 @@ function waitForSupabase() {
         }
     });
 }
-// price-adjustment-fixed.js - Agrega esta función al inicio del archivo
 
 // Función para obtener el ID del usuario admin autenticado
 async function getAdminUserId() {
@@ -724,7 +779,6 @@ async function getAdminUserId() {
             }
 
             // Si no hay usuario autenticado, usar un UUID por defecto
-            // IMPORTANTE: Asegúrate de que este UUID exista en tu tabla admin_users
             return '00000000-0000-0000-0000-000000000001';
         }
 
@@ -749,22 +803,4 @@ document.addEventListener('DOMContentLoaded', function () {
 // Hacer funciones disponibles globalmente
 window.showPriceAdjustmentModal = showPriceAdjustmentModal;
 window.hidePriceAdjustmentModal = hidePriceAdjustmentModal;
-
-
-// Agrega esta función en price-adjustment-fixed.js después de las otras funciones:
-function refreshProductDisplay() {
-    console.log('🔄 Forzando actualización de productos...');
-    
-    // Actualizar la lista de productos global
-    if (window.adminProducts && Array.isArray(window.adminProducts)) {
-        // Forzar recarga de productos desde Supabase
-        if (typeof window.reloadAdminProducts === 'function') {
-            window.reloadAdminProducts();
-        } else if (typeof window.loadAdminData === 'function') {
-            window.loadAdminData();
-        } else {
-            console.warn('⚠️ No se encontró función de recarga, forzando refresh de página');
-            setTimeout(() => window.location.reload(), 1000);
-        }
-    }
-}
+window.loadAdjustmentCategories = loadAdjustmentCategories;
