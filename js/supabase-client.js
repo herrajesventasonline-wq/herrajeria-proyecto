@@ -1,4 +1,4 @@
-// supabase-client.js - VERSIÓN SEGURA
+// supabase-client.js - VERSIÓN CORREGIDA
 console.log('🚀 Inicializando Supabase Client para Herrajería...');
 
 // Obtener credenciales de variables de entorno
@@ -52,18 +52,25 @@ function setupGlobalClient() {
         storage: supabaseClient.storage,
 
         // ========== PRODUCTOS ==========
-        getProducts: async function () {
+        getProducts: async function (forPublic = false) {
             try {
-                console.log('📦 Obteniendo productos...');
-                const { data, error } = await supabaseClient
+                console.log('📦 Obteniendo productos...', forPublic ? 'Para vista pública' : 'Para admin');
+
+                let query = supabaseClient
                     .from('products')
                     .select(`
-                        *,
-                        categories(name),
-                        brands(name)
-                    `)
-                    .eq('is_active', true)
+                *,
+                categories(name),
+                brands(name)
+            `)
                     .order('created_at', { ascending: false });
+
+                // SOLO filtrar por is_active si es para la vista pública
+                if (forPublic) {
+                    query = query.eq('is_active', true);
+                }
+
+                const { data, error } = await query;
 
                 if (error) {
                     console.error('❌ Error obteniendo productos:', error);
@@ -74,6 +81,48 @@ function setupGlobalClient() {
                 return data || [];
             } catch (error) {
                 console.error('❌ Error en getProducts:', error);
+                throw error;
+            }
+        },
+
+        getProductsWithFilter: async function (filters = {}) {
+            try {
+                console.log('🔍 Obteniendo productos con filtros:', filters);
+
+                let query = supabaseClient
+                    .from('products')
+                    .select(`
+                *,
+                categories(name),
+                brands(name)
+            `);
+
+                // Aplicar filtros
+                if (filters.is_active !== undefined) {
+                    query = query.eq('is_active', filters.is_active);
+                }
+
+                if (filters.category_id) {
+                    query = query.eq('category_id', filters.category_id);
+                }
+
+                if (filters.brand_id) {
+                    query = query.eq('brand_id', filters.brand_id);
+                }
+
+                query = query.order('created_at', { ascending: false });
+
+                const { data, error } = await query;
+
+                if (error) {
+                    console.error('❌ Error obteniendo productos filtrados:', error);
+                    throw new Error(`Error al cargar productos: ${error.message}`);
+                }
+
+                console.log(`✅ ${data?.length || 0} productos cargados con filtros`);
+                return data || [];
+            } catch (error) {
+                console.error('❌ Error en getProductsWithFilter:', error);
                 throw error;
             }
         },
@@ -191,93 +240,90 @@ function setupGlobalClient() {
         },
 
         // ========== ÓRDENES ==========
-        // EN supabase-client.js - REEMPLAZAR la función getOrders
+        createOrder: async function (orderData) {
+            try {
+                console.log('🛒 Creando orden en Supabase...', orderData);
 
-        // ========== FUNCIONES PARA ÓRDENES ==========
-// ========== ÓRDENES ==========
-createOrder: async function (orderData) {
-    try {
-        console.log('🛒 Creando orden en Supabase...', orderData);
-        
-        // Preparar datos para Supabase
-        const orderForSupabase = {
-            customer_name: `${orderData.firstName} ${orderData.lastName}`,
-            customer_phone: orderData.phone,
-            customer_email: orderData.email,
-            customer_dni: orderData.dni,
-            shipping_type: orderData.shipping.type,
-            shipping_address: orderData.shipping.address || '',
-            payment_method: orderData.paymentMethod,
-            total_amount: orderData.total,
-            status: 'confirmed',
-            invoice_number: orderData.orderNumber,
-            notes: `Pedido desde web - Cliente: ${orderData.email}`,
-            created_at: new Date().toISOString()
-        };
+                // Preparar datos para Supabase
+                const orderForSupabase = {
+                    customer_name: `${orderData.firstName} ${orderData.lastName}`,
+                    customer_phone: orderData.phone,
+                    customer_email: orderData.email,
+                    customer_dni: orderData.dni,
+                    shipping_type: orderData.shipping.type,
+                    shipping_address: orderData.shipping.address || '',
+                    payment_method: orderData.paymentMethod,
+                    total_amount: orderData.total,
+                    status: 'confirmed',
+                    invoice_number: orderData.orderNumber,
+                    notes: `Pedido desde web - Cliente: ${orderData.email}`,
+                    created_at: new Date().toISOString()
+                };
 
-        console.log('📤 Enviando orden a Supabase:', orderForSupabase);
+                console.log('📤 Enviando orden a Supabase:', orderForSupabase);
 
-        const { data, error } = await supabaseClient
-            .from('orders')
-            .insert([orderForSupabase])
-            .select()
-            .single();
+                const { data, error } = await supabaseClient
+                    .from('orders')
+                    .insert([orderForSupabase])
+                    .select()
+                    .single();
 
-        if (error) {
-            console.error('❌ Error creando orden en Supabase:', error);
-            throw new Error(`Error al crear orden: ${error.message}`);
-        }
+                if (error) {
+                    console.error('❌ Error creando orden en Supabase:', error);
+                    throw new Error(`Error al crear orden: ${error.message}`);
+                }
 
-        console.log('✅ Orden creada en Supabase:', data);
-        return data;
-        
-    } catch (error) {
-        console.error('❌ Error en createOrder:', error);
-        throw error;
-    }
-},
+                console.log('✅ Orden creada en Supabase:', data);
+                return data;
 
-createOrderItems: async function (orderId, items) {
-    try {
-        console.log(`📝 Creando items para orden ${orderId}...`, items);
-        
-        const orderItems = items.map(item => ({
-            order_id: orderId,
-            product_id: item.id,
-            product_name: item.name,
-            quantity: item.quantity,
-            price: item.price,
-            wholesale_price: item.wholesalePrice || null,
-            is_wholesale: item.wholesale || false,
-            created_at: new Date().toISOString()
-        }));
+            } catch (error) {
+                console.error('❌ Error en createOrder:', error);
+                throw error;
+            }
+        },
 
-        console.log('📤 Enviando items a Supabase:', orderItems);
+        createOrderItems: async function (orderId, items) {
+            try {
+                console.log(`📝 Creando items para orden ${orderId}...`, items);
 
-        const { data, error } = await supabaseClient
-            .from('order_items')
-            .insert(orderItems);
+                const orderItems = items.map(item => ({
+                    order_id: orderId,
+                    product_id: item.id,
+                    product_name: item.name,
+                    quantity: item.quantity,
+                    price: item.price,
+                    wholesale_price: item.wholesalePrice || null,
+                    is_wholesale: item.wholesale || false,
+                    created_at: new Date().toISOString()
+                }));
 
-        if (error) {
-            console.error('❌ Error creando order_items:', error);
-            throw new Error(`Error al crear items: ${error.message}`);
-        }
+                console.log('📤 Enviando items a Supabase:', orderItems);
 
-        console.log(`✅ ${orderItems.length} items creados para orden ${orderId}`);
-        return data;
-        
-    } catch (error) {
-        console.error('❌ Error en createOrderItems:', error);
-        throw error;
-    }
-},
-getOrders: async function(email = null) {
-    try {
-        console.log('📋 Obteniendo órdenes...', email ? 'Para email: ' + email : 'Todas');
-        
-        let query = supabaseClient
-            .from('orders')
-            .select(`
+                const { data, error } = await supabaseClient
+                    .from('order_items')
+                    .insert(orderItems);
+
+                if (error) {
+                    console.error('❌ Error creando order_items:', error);
+                    throw new Error(`Error al crear items: ${error.message}`);
+                }
+
+                console.log(`✅ ${orderItems.length} items creados para orden ${orderId}`);
+                return data;
+
+            } catch (error) {
+                console.error('❌ Error en createOrderItems:', error);
+                throw error;
+            }
+        },
+
+        getOrders: async function (email = null) {
+            try {
+                console.log('📋 Obteniendo órdenes...', email ? 'Para email: ' + email : 'Todas');
+
+                let query = supabaseClient
+                    .from('orders')
+                    .select(`
                 *,
                 order_items!left (
                     *,
@@ -291,80 +337,81 @@ getOrders: async function(email = null) {
                     )
                 )
             `)
-            .order('created_at', { ascending: false });
+                    .order('created_at', { ascending: false });
 
-        // Si se pasa un email, filtrar solo las órdenes de ese usuario
-        if (email) {
-            query = query.eq('customer_email', email);
-        }
-
-        const { data: orders, error: ordersError } = await query;
-
-        if (ordersError) {
-            console.error('❌ Error obteniendo órdenes:', ordersError);
-            return [];
-        }
-
-        console.log(`✅ ${orders?.length || 0} órdenes cargadas de la BD`);
-
-        if (!orders || orders.length === 0) {
-            return [];
-        }
-
-        // Procesar órdenes
-        const enhancedOrders = orders.map(order => {
-            // Parsear items JSONB si es necesario
-            let itemsArray = [];
-            try {
-                if (typeof order.items === 'string') {
-                    itemsArray = JSON.parse(order.items);
-                } else if (Array.isArray(order.items)) {
-                    itemsArray = order.items;
+                // Si se pasa un email, filtrar solo las órdenes de ese usuario
+                if (email) {
+                    query = query.eq('customer_email', email);
                 }
-            } catch (e) {
-                console.error('❌ Error parseando items JSONB:', e);
-                itemsArray = [];
+
+                const { data: orders, error: ordersError } = await query;
+
+                if (ordersError) {
+                    console.error('❌ Error obteniendo órdenes:', ordersError);
+                    return [];
+                }
+
+                console.log(`✅ ${orders?.length || 0} órdenes cargadas de la BD`);
+
+                if (!orders || orders.length === 0) {
+                    return [];
+                }
+
+                // Procesar órdenes
+                const enhancedOrders = orders.map(order => {
+                    // Parsear items JSONB si es necesario
+                    let itemsArray = [];
+                    try {
+                        if (typeof order.items === 'string') {
+                            itemsArray = JSON.parse(order.items);
+                        } else if (Array.isArray(order.items)) {
+                            itemsArray = order.items;
+                        }
+                    } catch (e) {
+                        console.error('❌ Error parseando items JSONB:', e);
+                        itemsArray = [];
+                    }
+
+                    // Si no hay items en JSONB, usar order_items
+                    if (itemsArray.length === 0 && order.order_items && Array.isArray(order.order_items)) {
+                        itemsArray = order.order_items.map(oi => ({
+                            id: oi.product_id,
+                            product_id: oi.product_id,
+                            name: oi.product_name || oi.products?.name || 'Producto',
+                            quantity: oi.quantity,
+                            price: parseFloat(oi.price) || 0,
+                            wholesale_price: parseFloat(oi.wholesale_price) || null,
+                            wholesale: oi.is_wholesale || false,
+                            image: oi.products?.main_image || ''
+                        }));
+                    }
+
+                    return {
+                        ...order,
+                        items: itemsArray,
+                        // Campos para compatibilidad
+                        customer_name: order.customer_name || 'Cliente no especificado',
+                        customer_phone: order.customer_phone || 'Sin teléfono',
+                        customer_email: order.customer_email || 'Sin email',
+                        customer_dni: order.customer_dni || '',
+                        invoice_number: order.invoice_number || `ORD-${order.id.substring(0, 8).toUpperCase()}`,
+                        total_amount: parseFloat(order.total_amount) || 0,
+                        status: order.status || 'pending',
+                        payment_method: order.payment_method || 'Por WhatsApp',
+                        shipping_type: order.shipping_type || 'domicilio',
+                        shipping_address: order.shipping_address || ''
+                    };
+                });
+
+                console.log(`📊 ${enhancedOrders.length} órdenes procesadas correctamente`);
+                return enhancedOrders;
+
+            } catch (error) {
+                console.error('❌ ERROR FATAL en getOrders:', error);
+                return [];
             }
+        },
 
-            // Si no hay items en JSONB, usar order_items
-            if (itemsArray.length === 0 && order.order_items && Array.isArray(order.order_items)) {
-                itemsArray = order.order_items.map(oi => ({
-                    id: oi.product_id,
-                    product_id: oi.product_id,
-                    name: oi.product_name || oi.products?.name || 'Producto',
-                    quantity: oi.quantity,
-                    price: parseFloat(oi.price) || 0,
-                    wholesale_price: parseFloat(oi.wholesale_price) || null,
-                    wholesale: oi.is_wholesale || false,
-                    image: oi.products?.main_image || ''
-                }));
-            }
-
-            return {
-                ...order,
-                items: itemsArray,
-                // Campos para compatibilidad
-                customer_name: order.customer_name || 'Cliente no especificado',
-                customer_phone: order.customer_phone || 'Sin teléfono',
-                customer_email: order.customer_email || 'Sin email',
-                customer_dni: order.customer_dni || '',
-                invoice_number: order.invoice_number || `ORD-${order.id.substring(0, 8).toUpperCase()}`,
-                total_amount: parseFloat(order.total_amount) || 0,
-                status: order.status || 'pending',
-                payment_method: order.payment_method || 'Por WhatsApp',
-                shipping_type: order.shipping_type || 'domicilio',
-                shipping_address: order.shipping_address || ''
-            };
-        });
-
-        console.log(`📊 ${enhancedOrders.length} órdenes procesadas correctamente`);
-        return enhancedOrders;
-        
-    } catch (error) {
-        console.error('❌ ERROR FATAL en getOrders:', error);
-        return [];
-    }
-},
         getOrderById: async function (id) {
             try {
                 console.log(`🔍 Obteniendo orden ID: ${id}`);
@@ -630,6 +677,103 @@ getOrders: async function(email = null) {
             }
         },
 
+        // ========== USUARIOS CON PEDIDOS ==========
+        getUsersWithOrders: async function () {
+            try {
+                console.log('🔍 Obteniendo usuarios con pedidos...');
+
+                // Primero, obtener todos los pedidos
+                const orders = await this.getOrders();
+                console.log('📋 Total de pedidos para procesar:', orders.length);
+
+                // Extraer usuarios únicos de los pedidos
+                const uniqueUsers = {};
+
+                orders.forEach(order => {
+                    const email = order.customer_email;
+                    if (email) {
+                        if (!uniqueUsers[email]) {
+                            uniqueUsers[email] = {
+                                email: email,
+                                name: order.customer_name || 'Cliente',
+                                phone: order.customer_phone || '',
+                                orders: [],
+                                total_spent: 0,
+                                first_order_date: order.created_at,
+                                last_order_date: order.created_at
+                            };
+                        }
+
+                        uniqueUsers[email].orders.push(order);
+                        uniqueUsers[email].total_spent += (order.total_amount || 0);
+
+                        // Actualizar última fecha
+                        const orderDate = new Date(order.created_at);
+                        const lastDate = new Date(uniqueUsers[email].last_order_date);
+                        if (orderDate > lastDate) {
+                            uniqueUsers[email].last_order_date = order.created_at;
+                        }
+
+                        // Actualizar primera fecha
+                        const firstDate = new Date(uniqueUsers[email].first_order_date);
+                        if (orderDate < firstDate) {
+                            uniqueUsers[email].first_order_date = order.created_at;
+                        }
+                    }
+                });
+
+                // Convertir a array
+                const usersArray = Object.values(uniqueUsers).map(user => ({
+                    id: `user-${user.email.replace(/[^a-zA-Z0-9]/g, '')}`,
+                    email: user.email,
+                    name: user.name,
+                    phone: user.phone,
+                    total_orders: user.orders.length,
+                    total_spent: user.total_spent,
+                    avg_order_value: user.orders.length > 0 ? user.total_spent / user.orders.length : 0,
+                    orders: user.orders,
+                    last_order: user.orders.length > 0 ?
+                        user.orders.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0] : null,
+                    created_at: user.first_order_date,
+                    last_sign_in_at: user.last_order_date,
+                    registration_date: new Date(user.first_order_date).toLocaleDateString('es-ES')
+                }));
+
+                // Ordenar por total gastado (mayor a menor)
+                usersArray.sort((a, b) => b.total_spent - a.total_spent);
+
+                console.log(`✅ ${usersArray.length} usuarios procesados con sus pedidos`);
+                return usersArray;
+
+            } catch (error) {
+                console.error('❌ Error en getUsersWithOrders:', error);
+                return [];
+            }
+        },
+
+        getUserOrders: async function (userEmail) {
+            try {
+                console.log(`📋 Obteniendo pedidos para usuario: ${userEmail}`);
+
+                const { data, error } = await supabaseClient
+                    .from('orders')
+                    .select('*')
+                    .eq('customer_email', userEmail)
+                    .order('created_at', { ascending: false });
+
+                if (error) {
+                    console.error('❌ Error obteniendo pedidos de usuario:', error);
+                    return [];
+                }
+
+                console.log(`✅ ${data?.length || 0} pedidos encontrados para ${userEmail}`);
+                return data || [];
+            } catch (error) {
+                console.error('❌ Error en getUserOrders:', error);
+                return [];
+            }
+        },
+
         // ========== UTILIDADES ==========
         isReady: function () {
             return supabaseClient !== null;
@@ -693,6 +837,14 @@ function setupFallbackClient() {
         getProductsByCategory: async () => [],
         getProductsByBrand: async () => [],
         getCurrentUserId: () => 'admin',
+        
+        getUsersWithOrders: async () => {
+            console.log('👥 Usando datos de ejemplo para usuarios');
+            return [];
+        },
+        
+        getUserOrders: async () => [],
+        
         isReady: () => true,
         testConnection: async () => ({ success: false, message: 'Modo desarrollo activo' })
     };
@@ -709,3 +861,5 @@ if (document.readyState === 'loading') {
 }
 
 console.log('✅ supabase-client.js cargado correctamente');
+
+
