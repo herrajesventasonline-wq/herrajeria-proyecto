@@ -13,6 +13,10 @@ let adminOrders = [];
 let currentProduct = null;
 let adminFilteredProducts = [];
 
+
+let adminUsers = [];
+let filteredUsers = [];
+
 // URLs y configuraciones
 const STORAGE_URL = 'https://opueqifkagoonpbubflj.supabase.co/storage/v1/object/public/product-images/';
 const PLACEHOLDER_IMAGE = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='150' viewBox='0 0 200 150'%3E%3Crect width='200' height='150' fill='%23f8fafc'/%3E%3Cpath d='M80 60h40v30H80z' fill='%23e2e8f0'/%3E%3Ccircle cx='100' cy='45' r='15' fill='%23e2e8f0'/%3E%3Ctext x='100' y='120' text-anchor='middle' font-family='Arial, sans-serif' font-size='12' fill='%2394a3b8'%3ESin imagen%3C/text%3E%3C/svg%3E";
@@ -72,22 +76,36 @@ document.addEventListener('DOMContentLoaded', async function () {
 
         // Cargar datos iniciales
         await loadAdminData();
+         // Cargar datos de usuarios después de un breve delay
+        setTimeout(async () => {
+            if (document.getElementById('users-list-container')) {
+                await loadUsersData();
+            }
+        }, 1000);
 
         // Configurar interfaz
         setupAdminEventListeners();
         setupProductForm();
         setupImageUploadListeners();
 
-        // 🔥 AGREGAR ESTA LÍNEA - Configurar modal de confirmación
+        // Configurar sistemas adicionales
+        addProductStatusStyles();
+        setupStatusFilter();
         setupConfirmationModal();
+        
+        // 🔥 INICIALIZAR CALCULADORA DE PRECIOS
+        if (typeof initPriceCalculator === 'function') {
+            setTimeout(initPriceCalculator, 500);
+        }
 
-        console.log('✅ Panel de administración inicializado correctamente');
-        // 🔥 INICIALIZAR SISTEMA DE AJUSTE DE PRECIOS
+        // Inicializar sistema de ajuste de precios
         setTimeout(() => {
             if (typeof setupPriceAdjustmentSystem === 'function') {
                 setupPriceAdjustmentSystem();
             }
         }, 500);
+
+        console.log('✅ Panel de administración inicializado correctamente');
 
     } catch (error) {
         console.error('💥 Error en inicialización:', error);
@@ -149,9 +167,16 @@ document.addEventListener('DOMContentLoaded', async function () {
         styleElement.textContent = styles;
         document.head.appendChild(styleElement);
     }
+    
 
     // Llama a esta función al inicio
     document.addEventListener('DOMContentLoaded', injectInvoiceStyles);
+
+
+
+
+    
+    
 
 });
 
@@ -229,23 +254,23 @@ function showConfirmation(options = {}) {
 
 function hideConfirmation() {
     console.log('🔴 Cerrando modal de confirmación...');
-    
+
     const modal = document.getElementById('confirmation-modal');
     const overlay = document.getElementById('overlay');
-    
+
     if (modal) {
         modal.style.display = 'none';
         modal.classList.remove('active');
     }
-    
+
     if (overlay) {
         overlay.style.display = 'none';
     }
-    
+
     document.body.style.overflow = '';
     document.body.style.position = '';
     document.body.style.width = '';
-    
+
     // Resolver promesa si existe
     if (confirmationResolve) {
         confirmationResolve(false);
@@ -407,6 +432,10 @@ async function loadAdminData() {
         allCategories = categoriesData.status === 'fulfilled' ? categoriesData.value : [];
         allBrands = brandsData.status === 'fulfilled' ? brandsData.value : [];
 
+             // Guardar en variable global para que sea accesible desde otros scripts
+        window.allCategories = allCategories;
+        window.allBrands = allBrands;
+
         // Cargar órdenes
         try {
             adminOrders = await window.supabaseClient.getOrders();
@@ -437,7 +466,7 @@ async function loadAdminData() {
 }
 
 // Agregar event listener para actualizar estadísticas cuando se recarga
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     // Actualizar estadísticas cada 60 segundos
     setInterval(() => {
         if (document.querySelector('#dashboard-section.active')) {
@@ -582,34 +611,34 @@ function showLoadingState(show) {
 function setupAdminEventListeners() {
     try {
         console.log('🔧 Configurando event listeners...');
-        
+
         // Pestañas del panel
         document.querySelectorAll('.admin-tab').forEach(tab => {
             tab.addEventListener('click', switchAdminTab);
         });
-        
+
         // Botones principales
         document.getElementById('add-product-btn')?.addEventListener('click', () => showProductModal(false));
         document.getElementById('logout-btn')?.addEventListener('click', logout);
         document.getElementById('price-adjustment-btn-2')?.addEventListener('click', showPriceAdjustmentModal);
-        
+
         // Búsquedas
         const productSearch = document.getElementById('product-search');
         if (productSearch) {
             productSearch.addEventListener('input', debounce(filterProducts, 300));
         }
-        
+
         // Configurar filtro de fechas para pedidos
         setupDateFilter();
-        
+
         // Configurar cierre de modales - AGREGAR ESTA LÍNEA
         setupModalCloseListeners();
-        
+
         // Configurar sistema de facturas
         setupInvoiceActions();
-        
+
         console.log('✅ Event listeners configurados correctamente');
-        
+
     } catch (error) {
         console.error('❌ Error configurando event listeners:', error);
     }
@@ -1165,10 +1194,76 @@ function switchAdminTab(e) {
     }
 }
 
+
+// Función para exportar datos de usuarios a CSV
+function exportUsersToCSV() {
+    try {
+        if (!adminUsers || adminUsers.length === 0) {
+            showNotification('No hay datos de usuarios para exportar', 'warning');
+            return;
+        }
+        
+        // Crear encabezados CSV
+        const headers = [
+            'Nombre',
+            'Email',
+            'Teléfono',
+            'Fecha Registro',
+            'Total Pedidos',
+            'Total Gastado',
+            'Ticket Promedio',
+            'Último Pedido'
+        ];
+        
+        // Crear filas de datos
+        const rows = adminUsers.map(user => [
+            `"${user.name}"`,
+            `"${user.email}"`,
+            `"${user.phone || ''}"`,
+            `"${user.registration_date}"`,
+            user.total_orders,
+            user.total_spent,
+            user.avg_order_value.toFixed(2),
+            user.last_order ? `"${new Date(user.last_order.created_at).toLocaleDateString('es-ES')}"` : ''
+        ]);
+        
+        // Unir encabezados y filas
+        const csvContent = [
+            headers.join(','),
+            ...rows.map(row => row.join(','))
+        ].join('\n');
+        
+        // Crear y descargar archivo
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        
+        link.setAttribute('href', url);
+        link.setAttribute('download', `usuarios_herrajeria_${new Date().toISOString().split('T')[0]}.csv`);
+        link.style.visibility = 'hidden';
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        showNotification('Datos exportados exitosamente', 'success');
+        
+    } catch (error) {
+        console.error('❌ Error exportando usuarios:', error);
+        showNotification('Error al exportar datos', 'error');
+    }
+}
 // Modificar la función updateAdminStats para incluir stock bajo
+// MODIFICAR updateAdminStats PARA INCLUIR PRODUCTOS ACTIVOS/INACTIVOS
+// ==============================================
+
+// Actualiza la función updateAdminStats para incluir estadísticas de productos activos:
+
 function updateAdminStats() {
     try {
         const totalProducts = adminProducts.length;
+        const activeProducts = adminProducts.filter(p => p && p.is_active).length;
+        const inactiveProducts = totalProducts - activeProducts;
         const inStockProducts = adminProducts.filter(p => p && p.stock > 0).length;
         const lowStockProducts = adminProducts.filter(p => p && p.stock <= (p.min_stock || 0) && p.stock > 0).length;
         const totalOrders = adminOrders.length;
@@ -1177,18 +1272,31 @@ function updateAdminStats() {
         // Actualizar elementos del dashboard
         updateElementText('total-products', totalProducts);
         updateElementText('in-stock-products', inStockProducts);
-        updateElementText('low-stock-products', lowStockProducts); // Cambiado de total-sales a low-stock-products
+        updateElementText('low-stock-products', lowStockProducts);
         updateElementText('total-orders', totalOrders);
         updateElementText('total-orders-display', totalOrders);
         updateElementText('total-revenue', `$${totalRevenue.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
 
-        // También actualizar estadísticas avanzadas
+        // También puedes agregar nuevos elementos para productos activos/inactivos
+        // Si tienes elementos HTML para mostrarlos:
+        const activeProductsElement = document.getElementById('active-products');
+        if (activeProductsElement) {
+            activeProductsElement.textContent = activeProducts;
+        }
+
+        const inactiveProductsElement = document.getElementById('inactive-products');
+        if (inactiveProductsElement) {
+            inactiveProductsElement.textContent = inactiveProducts;
+        }
+
+        // Actualizar estadísticas avanzadas
         updateAdvancedStats();
 
     } catch (error) {
         console.error('❌ Error actualizando estadísticas:', error);
     }
 }
+
 
 
 function updateElementText(id, value) {
@@ -1246,23 +1354,23 @@ function showProductModal(isEditing = false) {
 
 function hideProductModal() {
     console.log('🔴 Cerrando modal de producto...');
-    
+
     const modal = document.getElementById('product-modal');
     const overlay = document.getElementById('overlay');
-    
+
     if (modal) {
         modal.style.display = 'none';
         modal.classList.remove('active');
     }
-    
+
     if (overlay) {
         overlay.style.display = 'none';
     }
-    
+
     document.body.style.overflow = '';
     document.body.style.position = '';
     document.body.style.width = '';
-    
+
     // Resetear formulario
     resetProductForm();
 }
@@ -1270,19 +1378,19 @@ function hideProductModal() {
 
 function hideInvoiceModal() {
     console.log('🔴 Cerrando modal de factura...');
-    
+
     const modal = document.getElementById('invoice-modal');
     const overlay = document.getElementById('overlay');
-    
+
     if (modal) {
         modal.style.display = 'none';
         modal.classList.remove('active');
     }
-    
+
     if (overlay) {
         overlay.style.display = 'none';
     }
-    
+
     document.body.style.overflow = '';
     document.body.style.position = '';
     document.body.style.width = '';
@@ -1296,23 +1404,23 @@ function hideInvoiceModal() {
 
 function hidePriceAdjustmentModal() {
     console.log('🔴 Cerrando modal de ajuste de precios...');
-    
+
     const modal = document.getElementById('price-adjustment-modal');
     const overlay = document.getElementById('overlay');
-    
+
     if (modal) {
         modal.style.display = 'none';
         modal.classList.remove('active');
     }
-    
+
     if (overlay) {
         overlay.style.display = 'none';
     }
-    
+
     document.body.style.overflow = '';
     document.body.style.position = '';
     document.body.style.width = '';
-    
+
     // Resetear formulario de ajuste de precios
     const form = document.getElementById('price-adjustment-form');
     if (form) {
@@ -1330,7 +1438,7 @@ function showPriceAdjustmentModal() {
 // Función para cerrar todos los modales activos
 function closeAllModals() {
     console.log('🔴 Cerrando todos los modales activos...');
-    
+
     // Lista de todas las funciones de cierre de modales
     const closeFunctions = [
         hideProductModal,
@@ -1338,7 +1446,7 @@ function closeAllModals() {
         hideConfirmation,
         hideInvoiceModal
     ];
-    
+
     // Ejecutar todas las funciones de cierre
     closeFunctions.forEach(func => {
         try {
@@ -1347,19 +1455,19 @@ function closeAllModals() {
             console.warn('⚠️ Error al cerrar modal:', error.message);
         }
     });
-    
+
     // También cerrar cualquier modal genérico que pueda estar abierto
     document.querySelectorAll('.modal.active').forEach(modal => {
         modal.style.display = 'none';
         modal.classList.remove('active');
     });
-    
+
     // Ocultar overlay
     const overlay = document.getElementById('overlay');
     if (overlay) {
         overlay.style.display = 'none';
     }
-    
+
     // Restaurar scroll del body
     document.body.style.overflow = '';
     document.body.style.position = '';
@@ -1369,11 +1477,39 @@ function closeAllModals() {
 function resetProductForm() {
     const form = document.getElementById('product-form');
     if (form) form.reset();
-
+    
     document.getElementById('product-id').value = '';
+    
+    // Resetear valores por defecto para porcentajes
+    document.getElementById('wholesale-percentage').value = 100;
+    document.getElementById('retail-percentage').value = 150;
+    
+    // Resetear checkbox y orden
+    if (document.getElementById('product-is-offer')) {
+        document.getElementById('product-is-offer').checked = false;
+    }
+    
+    if (document.getElementById('product-category-order')) {
+        document.getElementById('product-category-order').value = 0;
+    }
+    
+    // Resetear modos manuales
+    if (typeof resetManualModes === 'function') {
+        resetManualModes();
+    }
+    
+    // Limpiar imágenes
     const preview = document.getElementById('images-preview');
     if (preview) preview.innerHTML = '';
+    
     updateUploadAreaFeedback();
+    
+    // Calcular precios iniciales
+    setTimeout(() => {
+        if (typeof calculatePricesFromCost === 'function') {
+            calculatePricesFromCost();
+        }
+    }, 100);
 }
 
 // ==============================================
@@ -1498,6 +1634,9 @@ function validateProductForm() {
     return { valid: true, message: '' };
 }
 
+// ==============================================
+// MODIFICAR LA FUNCIÓN prepareProductData
+// ==============================================
 function prepareProductData() {
     const colors = document.getElementById('product-colors').value;
     const colorsArray = colors ? colors.split(',').map(c => c.trim()).filter(c => c) : [];
@@ -1514,7 +1653,11 @@ function prepareProductData() {
         });
     }
 
-    return {
+    // Obtener los porcentajes actuales
+    const wholesalePercentage = parseInt(document.getElementById('wholesale-percentage').value) || 100;
+    const retailPercentage = parseInt(document.getElementById('retail-percentage').value) || 150;
+
+    const productData = {
         name: document.getElementById('product-name').value.trim(),
         description: document.getElementById('product-description').value.trim(),
         category_id: document.getElementById('product-category').value,
@@ -1523,14 +1666,210 @@ function prepareProductData() {
         cost_price: parseFloat(document.getElementById('product-cost-price').value) || 0,
         wholesale_price: parseFloat(document.getElementById('product-wholesale-price').value) || 0,
         retail_price: parseFloat(document.getElementById('product-retail-price').value) || 0,
+        wholesale_percentage: wholesalePercentage,
+        retail_percentage: retailPercentage,
         stock: parseInt(document.getElementById('product-stock').value) || 0,
         min_stock: parseInt(document.getElementById('product-min-stock').value) || 0,
         colors: colorsArray,
         specifications: specifications,
-
-        is_active: true
+        is_active: true,
+        is_offer: document.getElementById('product-is-offer')?.checked || false,
+        category_order: parseInt(document.getElementById('product-category-order')?.value) || 0
     };
+
+    return productData;
 }
+
+// ==============================================
+// AGREGAR ESTILOS CSS PARA PRODUCTOS INACTIVOS
+// ==============================================
+
+// Agrega estos estilos en tu archivo admin.css o styles.css:
+
+function addProductStatusStyles() {
+    const styles = `
+        /* Estilos para productos inactivos */
+        .product-item.product-inactive {
+            opacity: 0.7;
+            background: linear-gradient(45deg, #f8fafc 25%, #f1f5f9 25%, #f1f5f9 50%, #f8fafc 50%, #f8fafc 75%, #f1f5f9 75%, #f1f5f9);
+            background-size: 20px 20px;
+            border: 2px dashed #cbd5e1;
+        }
+        
+        .product-item.product-inactive:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+        }
+        
+        .inactive-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #f59e0b;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            z-index: 2;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .inactive-badge i {
+            margin-right: 4px;
+        }
+        
+        .product-item-visibility {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 8px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .product-item-visibility.visible {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+        }
+        
+        .product-item-visibility.hidden {
+            background: #fef3c7;
+            color: #92400e;
+            border: 1px solid #fde68a;
+        }
+        
+        /* Botones de activar/desactivar */
+        .btn-activate {
+            background: #10b981;
+            color: white;
+        }
+        
+        .btn-activate:hover {
+            background: #059669;
+        }
+        
+        .btn-deactivate {
+            background: #f59e0b;
+            color: white;
+        }
+        
+        .btn-deactivate:hover {
+            background: #d97706;
+        }
+        
+        /* Filtro de estado */
+        .status-filter {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .status-filter-btn {
+            padding: 6px 12px;
+            border: 1px solid #e2e8f0;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+        
+        .status-filter-btn.active {
+            background: #3b82f6;
+            color: white;
+            border-color: #3b82f6;
+        }
+        
+        .status-filter-btn:hover:not(.active) {
+            background: #f8fafc;
+        }
+    `;
+
+    const styleElement = document.createElement('style');
+    styleElement.textContent = styles;
+    document.head.appendChild(styleElement);
+}
+
+// ==============================================
+// FUNCIÓN PARA FILTRAR PRODUCTOS POR ESTADO
+// ==============================================
+
+// Agrega esta función para filtrar productos por estado (opcional):
+
+function setupStatusFilter() {
+    // Puedes agregar botones de filtro en tu HTML o crear dinámicamente
+    const searchContainer = document.querySelector('.search-container');
+    if (!searchContainer) return;
+
+    const filterHtml = `
+        <div class="status-filter" style="margin-top: 10px;">
+            <span style="font-size: 13px; color: #64748b; margin-right: 8px;">Filtrar por estado:</span>
+            <button class="status-filter-btn active" data-status="all">Todos</button>
+            <button class="status-filter-btn" data-status="active">Solo activos</button>
+            <button class="status-filter-btn" data-status="inactive">Solo inactivos</button>
+        </div>
+    `;
+
+    searchContainer.insertAdjacentHTML('beforeend', filterHtml);
+
+    // Configurar event listeners
+    document.querySelectorAll('.status-filter-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
+            // Remover clase active de todos
+            document.querySelectorAll('.status-filter-btn').forEach(b => b.classList.remove('active'));
+            // Agregar clase active al botón clicado
+            this.classList.add('active');
+
+            filterProductsByStatus(this.dataset.status);
+        });
+    });
+}
+
+function filterProductsByStatus(status) {
+    const searchInput = document.getElementById('product-search');
+    const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : '';
+
+    let filtered = adminProducts;
+
+    // Filtrar por estado
+    if (status === 'active') {
+        filtered = filtered.filter(p => p.is_active);
+    } else if (status === 'inactive') {
+        filtered = filtered.filter(p => !p.is_active);
+    }
+
+    // Aplicar búsqueda si hay término
+    if (searchTerm !== '') {
+        filtered = filtered.filter(product => {
+            if (!product) return false;
+
+            const searchFields = [
+                product.name || '',
+                product.categories?.name || '',
+                product.description || '',
+                product.brands?.name || '',
+                product.sku || '',
+                product.colors ? (Array.isArray(product.colors) ? product.colors.join(' ') : product.colors) : ''
+            ];
+
+            return searchFields.some(field =>
+                field && field.toLowerCase().includes(searchTerm)
+            );
+        });
+    }
+
+    adminFilteredProducts = filtered;
+    renderAdminProducts();
+}
+
+
+
+
 
 function generateSKU(name) {
     const prefix = name.substring(0, 3).toUpperCase().replace(/\s/g, '');
@@ -1618,9 +1957,17 @@ function renderAdminProducts() {
     }
 }
 
+// ==============================================
+// MODIFICAR LA FUNCIÓN createProductElement
+// ==============================================
 function createProductElement(product) {
     const div = document.createElement('div');
     div.className = 'product-item';
+
+    // Agregar clase si está inactivo para diferenciarlo visualmente
+    if (!product.is_active) {
+        div.classList.add('product-inactive');
+    }
 
     const images = getSafeProductImages(product);
     const mainImage = images[0] || PLACEHOLDER_IMAGE;
@@ -1638,6 +1985,8 @@ function createProductElement(product) {
                  loading="lazy"
                  onerror="this.onerror=null; this.src='${PLACEHOLDER_IMAGE}'">
             ${images.length > 1 ? `<div class="images-count-badge" title="${images.length} imágenes">+${images.length - 1}</div>` : ''}
+            ${!product.is_active ? `<div class="inactive-badge" title="Producto no visible para usuarios"><i class="fas fa-eye-slash"></i> Oculto</div>` : ''}
+            ${product.is_offer ? `<div class="offer-badge" title="Producto en oferta - Se muestra primero en categoría"><i class="fas fa-tag"></i> OFERTA</div>` : ''}
         </div>
         <div class="product-item-info">
             <div class="product-item-name">${escapeHtml(product.name || 'Producto sin nombre')}</div>
@@ -1653,10 +2002,25 @@ function createProductElement(product) {
             `<div class="product-item-colors"><strong>Colores:</strong> ${escapeHtml(Array.isArray(product.colors) ? product.colors.join(', ') : product.colors)}</div>` : ''}
             ${images.length > 0 ?
             `<div class="product-item-images-count"><i class="fas fa-images"></i> ${images.length} imagen(es)</div>` : ''}
+            <!-- Estado de visibilidad -->
+            <div class="product-item-visibility ${product.is_active ? 'visible' : 'hidden'}">
+                <i class="fas ${product.is_active ? 'fa-eye text-success' : 'fa-eye-slash text-warning'}"></i>
+                ${product.is_active ? 'Visible para usuarios' : 'Oculto para usuarios'}
+            </div>
+            <!-- Estado de oferta -->
+            ${product.is_offer ?
+            `<div class="product-item-offer" style="margin-top: 8px; padding: 4px 8px; background: linear-gradient(135deg, #f97316, #fb923c); color: white; border-radius: 4px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 5px;">
+                <i class="fas fa-tag"></i> EN OFERTA | Orden: ${product.category_order || 0}
+            </div>` : ''}
         </div>
         <div class="product-item-actions">
             <button class="btn btn-edit" onclick="editProduct('${product.id}')">
                 <i class="fas fa-edit"></i> Editar
+            </button>
+            <button class="btn ${product.is_active ? 'btn-warning' : 'btn-success'}" 
+                onclick="toggleProductStatus('${product.id}', ${product.is_active})">
+                <i class="fas ${product.is_active ? 'fa-eye-slash' : 'fa-eye'}"></i> 
+                ${product.is_active ? 'Desactivar' : 'Activar'}
             </button>
             <button class="btn btn-delete" onclick="deleteProduct('${product.id}')">
                 <i class="fas fa-trash"></i> Eliminar
@@ -1727,7 +2091,20 @@ function fillProductForm(product) {
     document.getElementById('product-retail-price').value = product.retail_price || 0;
     document.getElementById('product-stock').value = product.stock || 0;
     document.getElementById('product-min-stock').value = product.min_stock || 0;
-
+    
+    // Nuevos campos de porcentaje
+    document.getElementById('wholesale-percentage').value = product.wholesale_percentage || 100;
+    document.getElementById('retail-percentage').value = product.retail_percentage || 150;
+    
+    // Nuevos campos de oferta y orden
+    if (document.getElementById('product-is-offer')) {
+        document.getElementById('product-is-offer').checked = product.is_offer || false;
+    }
+    
+    if (document.getElementById('product-category-order')) {
+        document.getElementById('product-category-order').value = product.category_order || 0;
+    }
+    
     // Colores
     const colors = product.colors;
     if (Array.isArray(colors)) {
@@ -1752,8 +2129,16 @@ function fillProductForm(product) {
             specsInput.value = '';
         }
     }
-
-
+    
+    // Resetear modos manuales y calcular precios
+    setTimeout(() => {
+        if (typeof resetManualModes === 'function') {
+            resetManualModes();
+        }
+        if (typeof calculatePricesFromCost === 'function') {
+            calculatePricesFromCost();
+        }
+    }, 100);
 }
 
 async function deleteProduct(id) {
@@ -1812,6 +2197,49 @@ async function reloadAdminProducts() {
     } catch (error) {
         console.error('❌ Error recargando productos:', error);
         showNotification('Error al recargar productos', 'error');
+    }
+}
+
+
+
+// ==============================================
+// FUNCIÓN PARA ACTIVAR/DESACTIVAR PRODUCTOS
+// ==============================================
+
+async function toggleProductStatus(productId, currentStatus) {
+    const product = adminProducts.find(p => p.id === productId);
+    if (!product) {
+        showNotification('Producto no encontrado', 'error');
+        return;
+    }
+
+    const newStatus = !currentStatus;
+
+    try {
+        // Actualizar el producto en Supabase directamente
+        await window.supabaseClient.updateProduct(productId, {
+            is_active: newStatus,
+            updated_at: new Date().toISOString()
+        });
+
+        // Actualizar el estado local inmediatamente
+        const index = adminProducts.findIndex(p => p.id === productId);
+        if (index !== -1) {
+            adminProducts[index].is_active = newStatus;
+        }
+
+        // Actualizar la interfaz inmediatamente
+        renderAdminProducts();
+        updateAdminStats();
+
+        showNotification(
+            `Producto ${newStatus ? 'activado' : 'desactivado'} correctamente`,
+            newStatus ? 'success' : 'warning'
+        );
+
+    } catch (error) {
+        console.error('❌ Error cambiando estado del producto:', error);
+        showNotification('Error al cambiar el estado del producto: ' + error.message, 'error');
     }
 }
 
@@ -2899,21 +3327,21 @@ function setupInvoiceActions() {
 async function updateAdvancedStats() {
     try {
         console.log('📊 Actualizando estadísticas avanzadas...');
-        
+
         // Actualizar productos más vendidos
         await updateTopSoldProducts();
-        
+
         // Actualizar productos más clickeados
         await updateTopClickedProducts();
-        
+
         // Actualizar productos más buscados
         await updateTopSearchedProducts();
-        
+
         // Actualizar lista de stock bajo
         updateLowStockDetails();
-        
+
         console.log('✅ Estadísticas avanzadas actualizadas');
-        
+
     } catch (error) {
         console.error('❌ Error actualizando estadísticas avanzadas:', error);
     }
@@ -2923,13 +3351,13 @@ async function updateAdvancedStats() {
 async function updateTopSoldProducts() {
     try {
         console.log('🛒 Obteniendo productos más vendidos...');
-        
+
         // En una implementación real, esto vendría de Supabase
         // Por ahora, simulemos datos con los pedidos existentes
-        
+
         const topSoldContainer = document.getElementById('top-sold-products');
         if (!topSoldContainer) return;
-        
+
         // Simular datos para demo
         // En producción, consultarías la base de datos
         const sampleData = [
@@ -2939,7 +3367,7 @@ async function updateTopSoldProducts() {
             { name: 'Perno estructural', value: 22, trend: 'down' },
             { name: 'Clavo industrial', value: 18, trend: 'up' }
         ];
-        
+
         if (sampleData.length === 0) {
             topSoldContainer.innerHTML = `
                 <div class="empty-state">
@@ -2949,14 +3377,14 @@ async function updateTopSoldProducts() {
             `;
             return;
         }
-        
+
         let html = '';
         sampleData.forEach((product, index) => {
             const trendClass = `trend-${product.trend}`;
-            const trendIcon = product.trend === 'up' ? 'fas fa-arrow-up' : 
-                             product.trend === 'down' ? 'fas fa-arrow-down' : 
-                             'fas fa-minus';
-            
+            const trendIcon = product.trend === 'up' ? 'fas fa-arrow-up' :
+                product.trend === 'down' ? 'fas fa-arrow-down' :
+                    'fas fa-minus';
+
             html += `
                 <div class="product-stat-item">
                     <div class="product-stat-rank">${index + 1}</div>
@@ -2972,9 +3400,9 @@ async function updateTopSoldProducts() {
                 </div>
             `;
         });
-        
+
         topSoldContainer.innerHTML = html;
-        
+
     } catch (error) {
         console.error('❌ Error obteniendo productos más vendidos:', error);
     }
@@ -2984,10 +3412,10 @@ async function updateTopSoldProducts() {
 async function updateTopClickedProducts() {
     try {
         console.log('🖱️ Obteniendo productos más clickeados...');
-        
+
         const topClickedContainer = document.getElementById('top-clicked-products');
         if (!topClickedContainer) return;
-        
+
         // En producción, esto vendría de una tabla de analytics
         const sampleData = [
             { name: 'Martillo profesional', clicks: 156, change: '+12%' },
@@ -2996,7 +3424,7 @@ async function updateTopClickedProducts() {
             { name: 'Sierra circular', clicks: 76, change: '-5%' },
             { name: 'Destornillador set', clicks: 65, change: '+15%' }
         ];
-        
+
         if (sampleData.length === 0) {
             topClickedContainer.innerHTML = `
                 <div class="empty-state">
@@ -3006,12 +3434,12 @@ async function updateTopClickedProducts() {
             `;
             return;
         }
-        
+
         let html = '';
         sampleData.forEach((product, index) => {
-            const changeColor = product.change.startsWith('+') ? 'text-success' : 
-                               product.change.startsWith('-') ? 'text-danger' : 'text-secondary';
-            
+            const changeColor = product.change.startsWith('+') ? 'text-success' :
+                product.change.startsWith('-') ? 'text-danger' : 'text-secondary';
+
             html += `
                 <div class="product-stat-item">
                     <div class="product-stat-rank">${index + 1}</div>
@@ -3025,9 +3453,9 @@ async function updateTopClickedProducts() {
                 </div>
             `;
         });
-        
+
         topClickedContainer.innerHTML = html;
-        
+
     } catch (error) {
         console.error('❌ Error obteniendo productos más clickeados:', error);
     }
@@ -3037,10 +3465,10 @@ async function updateTopClickedProducts() {
 async function updateTopSearchedProducts() {
     try {
         console.log('🔍 Obteniendo productos más buscados...');
-        
+
         const topSearchedContainer = document.getElementById('top-searched-products');
         if (!topSearchedContainer) return;
-        
+
         // En producción, esto vendría de logs de búsqueda
         const sampleData = [
             { name: 'Tornillos inoxidables', searches: 89 },
@@ -3049,7 +3477,7 @@ async function updateTopSearchedProducts() {
             { name: 'Accesorios baño', searches: 54 },
             { name: 'Cerraduras seguridad', searches: 43 }
         ];
-        
+
         if (sampleData.length === 0) {
             topSearchedContainer.innerHTML = `
                 <div class="empty-state">
@@ -3059,7 +3487,7 @@ async function updateTopSearchedProducts() {
             `;
             return;
         }
-        
+
         let html = '';
         sampleData.forEach((product, index) => {
             html += `
@@ -3074,9 +3502,9 @@ async function updateTopSearchedProducts() {
                 </div>
             `;
         });
-        
+
         topSearchedContainer.innerHTML = html;
-        
+
     } catch (error) {
         console.error('❌ Error obteniendo productos más buscados:', error);
     }
@@ -3086,22 +3514,22 @@ async function updateTopSearchedProducts() {
 function updateLowStockDetails() {
     try {
         console.log('⚠️ Actualizando lista de stock bajo...');
-        
+
         const lowStockContainer = document.getElementById('low-stock-details');
         const lowStockCount = document.getElementById('low-stock-count');
-        
+
         if (!lowStockContainer || !lowStockCount) return;
-        
+
         // Filtrar productos con stock bajo
         const lowStockProducts = adminProducts.filter(product => {
             const stock = product.stock || 0;
             const minStock = product.min_stock || 0;
             return stock > 0 && stock <= minStock;
         });
-        
+
         // Actualizar contador
         lowStockCount.textContent = lowStockProducts.length;
-        
+
         if (lowStockProducts.length === 0) {
             lowStockContainer.innerHTML = `
                 <div class="empty-state">
@@ -3111,15 +3539,15 @@ function updateLowStockDetails() {
             `;
             return;
         }
-        
+
         // Ordenar por stock más bajo
         lowStockProducts.sort((a, b) => (a.stock || 0) - (b.stock || 0));
-        
+
         let html = '';
         lowStockProducts.forEach(product => {
             const stock = product.stock || 0;
             const minStock = product.min_stock || 0;
-            
+
             html += `
                 <div class="low-stock-item" onclick="editProduct('${product.id}')" style="cursor: pointer;">
                     <div class="low-stock-name">${escapeHtml(product.name || 'Producto sin nombre')}</div>
@@ -3130,9 +3558,9 @@ function updateLowStockDetails() {
                 </div>
             `;
         });
-        
+
         lowStockContainer.innerHTML = html;
-        
+
     } catch (error) {
         console.error('❌ Error actualizando lista de stock bajo:', error);
     }
@@ -3143,7 +3571,7 @@ function switchToProductsTab() {
     const productsTab = document.querySelector('.admin-tab[data-tab="products"]');
     if (productsTab) {
         productsTab.click();
-        
+
         // También enfocar la búsqueda de stock bajo si existe
         setTimeout(() => {
             const searchInput = document.getElementById('stock-search');
@@ -4080,16 +4508,16 @@ function setupPrintStyles() {
 
 function setupModalCloseListeners() {
     console.log('🔧 Configurando listeners para cerrar modales...');
-    
+
     // 1. Configurar botones .close-modal para cada modal
     document.querySelectorAll('.close-modal').forEach(button => {
-        button.addEventListener('click', function() {
+        button.addEventListener('click', function () {
             const modal = this.closest('.modal');
             if (modal) {
                 const modalId = modal.id;
                 console.log('❌ Cerrar modal clickeado para:', modalId);
-                
-                switch(modalId) {
+
+                switch (modalId) {
                     case 'product-modal':
                         hideProductModal();
                         break;
@@ -4112,36 +4540,36 @@ function setupModalCloseListeners() {
             }
         });
     });
-    
+
     // 2. Configurar botones .btn-cancel específicos
     const cancelButtons = [
         { id: 'cancel-product', action: hideProductModal },
         { id: 'cancel-adjustment', action: hidePriceAdjustmentModal },
         { id: 'confirmation-cancel', action: hideConfirmation }
     ];
-    
+
     cancelButtons.forEach(btn => {
         const button = document.getElementById(btn.id);
         if (button) {
-            button.addEventListener('click', function(e) {
+            button.addEventListener('click', function (e) {
                 e.preventDefault();
                 console.log('❌ Botón cancelar clickeado:', btn.id);
                 btn.action();
             });
         }
     });
-    
+
     // 3. Configurar overlay para cerrar modales
     const overlay = document.getElementById('overlay');
     if (overlay) {
-        overlay.addEventListener('click', function() {
+        overlay.addEventListener('click', function () {
             console.log('🎯 Overlay clickeado, cerrando modales...');
             closeAllModals();
         });
     }
-    
+
     // 4. Configurar tecla ESC para cerrar modales
-    document.addEventListener('keydown', function(e) {
+    document.addEventListener('keydown', function (e) {
         if (e.key === 'Escape') {
             console.log('⎋ Tecla ESC presionada');
             closeAllModals();
@@ -4252,9 +4680,697 @@ function addCompactInvoiceStyles() {
     document.head.appendChild(styleElement);
 }
 
+
+// admin-init.js - AGREGAR ESTA FUNCIÓN
+function setupGlobalPercentagesToggle() {
+    const toggle = document.createElement('div');
+    toggle.className = 'global-percent-toggle';
+    toggle.innerHTML = `
+        <label style="display: flex; align-items: center; gap: 10px; margin: 10px 0;">
+            <input type="checkbox" id="use-global-percent" checked>
+            <span>Usar porcentajes globales (Mayorista: 100% | Minorista: 150%)</span>
+            <button class="btn btn-sm" onclick="showGlobalSettings()">
+                <i class="fas fa-cog"></i> Configurar Global
+            </button>
+        </label>
+    `;
+    
+    // Insertar antes del formulario de precios
+    const priceSection = document.querySelector('.form-row:has(#wholesale-percentage)');
+    if (priceSection) {
+        priceSection.parentNode.insertBefore(toggle, priceSection);
+    }
+    
+    // Event listener
+    document.getElementById('use-global-percent').addEventListener('change', function() {
+        const percentagesEnabled = !this.checked;
+        document.getElementById('wholesale-percentage').disabled = !percentagesEnabled;
+        document.getElementById('retail-percentage').disabled = !percentagesEnabled;
+        
+        if (this.checked) {
+            // Cargar valores globales
+            loadGlobalPercentages();
+        }
+    });
+}
+
+// Función para cargar porcentajes globales
+async function loadGlobalPercentages() {
+    try {
+        const { data } = await supabaseClient
+            .from('global_settings')
+            .select('*')
+            .single();
+            
+        if (data) {
+            document.getElementById('wholesale-percentage').value = data.wholesale_percentage;
+            document.getElementById('retail-percentage').value = data.retail_percentage;
+            calculatePricesFromCost();
+        }
+    } catch (error) {
+        console.error('Error cargando config global:', error);
+    }
+}
+
 // Llamar a la función al cargar
 document.addEventListener('DOMContentLoaded', addCompactInvoiceStyles);
 // Llamar a la función al cargar
 document.addEventListener('DOMContentLoaded', addIVAIncludedStyles);
 // Llamar a la función al cargar
 document.addEventListener('DOMContentLoaded', setupPrintStyles);
+
+// ==============================================
+async function loadUsersData() {
+    try {
+        console.log('👥 Cargando datos de usuarios...');
+        showLoadingState(true);
+
+        // Obtener usuarios desde Supabase
+        const users = await window.supabaseClient.getUsersWithOrders();
+        
+        if (users && users.length > 0) {
+            adminUsers = users;
+            filteredUsers = [...adminUsers];
+            
+            // Actualizar estadísticas
+            updateUsersStats(adminUsers);
+            
+            // Renderizar usuarios
+            renderUsers();
+            
+            console.log(`✅ ${adminUsers.length} usuarios cargados`);
+        } else {
+            console.log('⚠️ No se encontraron usuarios');
+            adminUsers = [];
+            filteredUsers = [];
+            updateUsersStats([]);
+            renderUsers();
+        }
+
+        showLoadingState(false);
+        showNotification('Datos de usuarios actualizados', 'success');
+
+    } catch (error) {
+        console.error('❌ Error cargando datos de usuarios:', error);
+        showNotification('Error al cargar usuarios: ' + error.message, 'error');
+        showLoadingState(false);
+    }
+}
+
+// ==============================================
+// FUNCIÓN PARA RENDERIZAR USUARIOS - AGREGAR ESTO
+// ==============================================
+
+function renderUsers() {
+    try {
+        console.log('👤 Renderizando lista de usuarios...');
+        
+        const usersContainer = document.getElementById('users-list-container');
+        if (!usersContainer) {
+            console.error('❌ No se encontró #users-list-container');
+            return;
+        }
+
+        // Limpiar contenedor
+        usersContainer.innerHTML = '';
+
+        if (!filteredUsers || filteredUsers.length === 0) {
+            usersContainer.innerHTML = `
+                <div class="no-users" style="text-align: center; padding: 60px 20px; background: white; border-radius: 12px; border: 2px dashed #e2e8f0;">
+                    <i class="fas fa-users" style="font-size: 64px; color: #cbd5e1; margin-bottom: 20px;"></i>
+                    <h3 style="color: #475569; margin-bottom: 10px;">No hay usuarios registrados</h3>
+                    <p style="color: #64748b;">Los usuarios aparecerán aquí cuando se registren en la tienda.</p>
+                </div>
+            `;
+            return;
+        }
+
+        console.log(`✅ Mostrando ${filteredUsers.length} usuarios`);
+
+        // Crear tabla de usuarios
+        const table = document.createElement('table');
+        table.className = 'users-table';
+        table.style.cssText = `
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        `;
+
+        // Encabezados de tabla
+        table.innerHTML = `
+            <thead style="background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: white;">
+                <tr>
+                    <th style="padding: 15px; text-align: left;">Nombre</th>
+                    <th style="padding: 15px; text-align: left;">Email</th>
+                    <th style="padding: 15px; text-align: left;">Teléfono</th>
+                    <th style="padding: 15px; text-align: left;">Fecha Registro</th>
+                    <th style="padding: 15px; text-align: center;">Pedidos</th>
+                    <th style="padding: 15px; text-align: right;">Total Gastado</th>
+                    <th style="padding: 15px; text-align: right;">Ticket Promedio</th>
+                    <th style="padding: 15px; text-align: center;">Último Pedido</th>
+                </tr>
+            </thead>
+            <tbody>
+            </tbody>
+        `;
+
+        const tbody = table.querySelector('tbody');
+
+        // Ordenar usuarios por fecha de registro (más recientes primero)
+        const sortedUsers = [...filteredUsers].sort((a, b) => {
+            return new Date(b.created_at) - new Date(a.created_at);
+        });
+
+        // Agregar cada usuario a la tabla
+        sortedUsers.forEach(user => {
+            const row = document.createElement('tr');
+            row.style.cssText = `
+                border-bottom: 1px solid #e2e8f0;
+                transition: background 0.2s;
+            `;
+            row.onmouseenter = () => row.style.background = '#f8fafc';
+            row.onmouseleave = () => row.style.background = '';
+
+            // Formatear fecha de registro
+            const regDate = new Date(user.created_at);
+            const formattedRegDate = regDate.toLocaleDateString('es-ES', {
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric'
+            });
+
+            // Formatear última orden
+            let lastOrderDate = 'Nunca';
+            if (user.last_order && user.last_order.created_at) {
+                const lastOrder = new Date(user.last_order.created_at);
+                lastOrderDate = lastOrder.toLocaleDateString('es-ES', {
+                    day: '2-digit',
+                    month: 'short'
+                });
+            }
+
+            // Determinar clase para total de pedidos
+            const ordersClass = user.total_orders > 0 ? 'orders-active' : 'orders-none';
+
+            row.innerHTML = `
+                <td style="padding: 15px; font-weight: 500; color: #1e293b;">
+                    ${escapeHtml(user.name || 'No especificado')}
+                </td>
+                <td style="padding: 15px; color: #475569;">
+                    ${escapeHtml(user.email || 'Sin email')}
+                </td>
+                <td style="padding: 15px; color: #475569;">
+                    ${escapeHtml(user.phone || 'Sin teléfono')}
+                </td>
+                <td style="padding: 15px; color: #64748b; font-size: 14px;">
+                    ${formattedRegDate}
+                </td>
+                <td style="padding: 15px; text-align: center;">
+                    <span class="${ordersClass}" style="
+                        display: inline-block;
+                        padding: 4px 12px;
+                        border-radius: 20px;
+                        font-weight: 600;
+                        font-size: 13px;
+                        ${user.total_orders > 0 ? 
+                            'background: #d1fae5; color: #065f46;' : 
+                            'background: #f1f5f9; color: #64748b;'
+                        }
+                    ">
+                        ${user.total_orders || 0}
+                    </span>
+                </td>
+                <td style="padding: 15px; text-align: right; font-weight: 600; color: #059669;">
+                    $${(user.total_spent || 0).toLocaleString('es-AR', { 
+                        minimumFractionDigits: 2, 
+                        maximumFractionDigits: 2 
+                    })}
+                </td>
+                <td style="padding: 15px; text-align: right; color: #3b82f6; font-weight: 500;">
+                    $${(user.avg_order_value || 0).toLocaleString('es-AR', { 
+                        minimumFractionDigits: 2, 
+                        maximumFractionDigits: 2 
+                    })}
+                </td>
+                <td style="padding: 15px; text-align: center; color: #64748b; font-size: 14px;">
+                    ${lastOrderDate}
+                </td>
+            `;
+
+            tbody.appendChild(row);
+        });
+
+        usersContainer.appendChild(table);
+
+        // Agregar estilos para la tabla
+        injectUsersTableStyles();
+
+    } catch (error) {
+        console.error('❌ Error renderizando usuarios:', error);
+        showNotification('Error al mostrar usuarios: ' + error.message, 'error');
+    }
+}
+
+// Función para inyectar estilos de tabla de usuarios
+function injectUsersTableStyles() {
+    if (document.getElementById('users-table-styles')) return;
+
+    const styles = `
+        .users-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        
+        .users-table thead {
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            color: white;
+        }
+        
+        .users-table th {
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        .users-table tbody tr {
+            border-bottom: 1px solid #e2e8f0;
+            transition: background 0.2s;
+        }
+        
+        .users-table tbody tr:hover {
+            background: #f8fafc;
+        }
+        
+        .users-table td {
+            padding: 15px;
+            font-size: 14px;
+        }
+        
+        .orders-active {
+            background: #d1fae5;
+            color: #065f46;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 13px;
+        }
+        
+        .orders-none {
+            background: #f1f5f9;
+            color: #64748b;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 13px;
+        }
+        
+        @media (max-width: 1200px) {
+            .users-table-container {
+                overflow-x: auto;
+            }
+            
+            .users-table {
+                min-width: 1000px;
+            }
+        }
+    `;
+
+    const styleElement = document.createElement('style');
+    styleElement.id = 'users-table-styles';
+    styleElement.textContent = styles;
+    document.head.appendChild(styleElement);
+}
+
+function updateUsersStats(users) {
+    try {
+        const totalUsers = users.length;
+        const usersWithOrders = users.filter(u => u.total_orders > 0).length;
+
+        // Calcular ticket promedio
+        const usersWithOrdersList = users.filter(u => u.total_orders > 0);
+        const totalRevenue = usersWithOrdersList.reduce((sum, user) => sum + user.total_spent, 0);
+        const avgOrderValue = usersWithOrdersList.length > 0
+            ? totalRevenue / usersWithOrdersList.length
+            : 0;
+
+        // Calcular nuevos usuarios este mes
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const newUsersThisMonth = users.filter(user => {
+            const userDate = new Date(user.created_at);
+            return userDate >= startOfMonth;
+        }).length;
+
+        // Actualizar elementos
+        updateElementText('total-users', totalUsers);
+        updateElementText('users-with-orders', usersWithOrders);
+        updateElementText('avg-order-value', `$${avgOrderValue.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+        updateElementText('new-users-month', newUsersThisMonth);
+
+    } catch (error) {
+        console.error('❌ Error actualizando estadísticas de usuarios:', error);
+    }
+}
+
+
+// ==============================================
+// FUNCIONES PARA DETALLES DE USUARIO
+// ==============================================
+
+// Función para mostrar detalles del usuario
+async function showUserDetail(userId) {
+    try {
+        console.log('👤 Mostrando detalles del usuario:', userId);
+        
+        // Mostrar estado de carga
+        showLoadingState(true);
+
+        // Obtener usuario específico
+        const user = await window.supabaseClient.getUserById(userId);
+        if (!user) {
+            showNotification('Usuario no encontrado', 'error');
+            showLoadingState(false);
+            return;
+        }
+
+        // Obtener órdenes del usuario
+        const userOrders = await window.supabaseClient.getOrdersByUserId(userId);
+
+        // Llenar el modal con la información
+        fillUserDetailModal(user, userOrders);
+
+        // Mostrar el modal
+        showModal('user-detail-modal');
+
+        showLoadingState(false);
+
+    } catch (error) {
+        console.error('❌ Error cargando detalles del usuario:', error);
+        showNotification('Error al cargar detalles del usuario: ' + error.message, 'error');
+        showLoadingState(false);
+    }
+}
+
+// Función para llenar el modal de detalles del usuario
+function fillUserDetailModal(user, orders) {
+    console.log('📋 Llenando modal de usuario:', user);
+    
+    // 1. Información básica del usuario
+    document.getElementById('detail-user-name').textContent = user.name || 'No especificado';
+    document.getElementById('detail-user-email').textContent = user.email || 'Sin email';
+    document.getElementById('detail-user-phone').textContent = user.phone || 'Sin teléfono';
+    
+    // Formatear fecha de registro
+    const regDate = new Date(user.created_at);
+    const formattedRegDate = regDate.toLocaleDateString('es-ES', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    });
+    document.getElementById('detail-user-reg-date').textContent = formattedRegDate;
+    
+    // Para el mensaje de no compras
+    document.getElementById('reg-date-only').textContent = regDate.toLocaleDateString('es-ES');
+    document.getElementById('reg-time-only').textContent = regDate.toLocaleTimeString('es-ES', {
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+
+    // 2. Estadísticas
+    const totalOrders = orders.length;
+    const totalSpent = orders.reduce((sum, order) => sum + (order.total_amount || 0), 0);
+    
+    document.getElementById('detail-user-total-orders').textContent = totalOrders;
+    document.getElementById('detail-user-total-spent').textContent = 
+        `$${totalSpent.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
+    
+    document.getElementById('purchase-count').textContent = totalOrders;
+
+    // 3. Mostrar historial de compras o mensaje de no compras
+    const purchasesList = document.getElementById('purchases-list');
+    const noPurchasesMessage = document.getElementById('no-purchases-message');
+    const exportBtn = document.getElementById('export-history-btn');
+
+    if (totalOrders === 0) {
+        // Mostrar mensaje de no compras
+        purchasesList.style.display = 'none';
+        noPurchasesMessage.style.display = 'block';
+        exportBtn.style.display = 'none';
+    } else {
+        // Mostrar historial de compras
+        noPurchasesMessage.style.display = 'none';
+        purchasesList.style.display = 'block';
+        exportBtn.style.display = 'inline-flex';
+        
+        // Renderizar órdenes
+        renderUserOrders(orders, purchasesList);
+    }
+}
+
+// Función para renderizar órdenes del usuario
+function renderUserOrders(orders, container) {
+    container.innerHTML = '';
+    
+    // Ordenar por fecha más reciente primero
+    const sortedOrders = [...orders].sort((a, b) => {
+        const dateA = new Date(a.created_at);
+        const dateB = new Date(b.created_at);
+        return dateB - dateA;
+    });
+
+    sortedOrders.forEach(order => {
+        const orderElement = createUserOrderElement(order);
+        container.appendChild(orderElement);
+    });
+}
+
+// Función para crear elemento de orden para el historial del usuario
+function createUserOrderElement(order) {
+    const orderDate = new Date(order.created_at);
+    const formattedDate = orderDate.toLocaleDateString('es-ES', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+    });
+    const formattedTime = orderDate.toLocaleTimeString('es-ES', {
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+
+    // Calcular cantidad de productos
+    let itemCount = 0;
+    let productNames = [];
+    
+    if (order.items) {
+        try {
+            let itemsData = order.items;
+            if (typeof itemsData === 'string') {
+                itemsData = JSON.parse(itemsData);
+            }
+            
+            if (Array.isArray(itemsData)) {
+                itemCount = itemsData.reduce((sum, item) => sum + (parseInt(item.quantity) || 1), 0);
+                productNames = itemsData.map(item => item.name || item.product_name || 'Producto')
+                    .filter(name => name);
+            }
+        } catch (error) {
+            console.error('Error procesando items:', error);
+        }
+    }
+
+    const div = document.createElement('div');
+    div.className = 'user-order-card';
+    div.style.cssText = `
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 16px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        border: 1px solid #e2e8f0;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    `;
+    
+    div.onmouseover = () => div.style.transform = 'translateY(-2px)';
+    div.onmouseout = () => div.style.transform = 'translateY(0)';
+    div.onclick = () => {
+        hideUserDetailModal();
+        setTimeout(() => viewOrderDetail(order.id), 300);
+    };
+
+    div.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
+            <div style="flex: 1;">
+                <div style="margin-bottom: 8px;">
+                    <strong style="font-size: 16px; color: #1e293b;">Orden #${order.invoice_number || order.id.substring(0, 8)}</strong>
+                    <div style="color: #64748b; font-size: 14px; margin-top: 4px;">${formattedDate} ${formattedTime}</div>
+                </div>
+                <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 8px;">
+                    <span style="background: #f1f5f9; padding: 4px 10px; border-radius: 6px; font-size: 13px; color: #475569; font-weight: 500;">
+                        ${itemCount} producto${itemCount !== 1 ? 's' : ''}
+                    </span>
+                    <span style="background: #f0fdf4; padding: 4px 10px; border-radius: 6px; font-size: 13px; color: #065f46; font-weight: 500;">
+                        ${order.payment_method || 'Por WhatsApp'}
+                    </span>
+                    <span style="background: #dbeafe; padding: 4px 10px; border-radius: 6px; font-size: 13px; color: #1d4ed8; font-weight: 500;">
+                        Confirmado
+                    </span>
+                </div>
+            </div>
+            <div style="font-size: 20px; font-weight: 700; color: #059669; background: #f0fdf4; padding: 8px 16px; border-radius: 8px; border: 2px solid #bbf7d0;">
+                $${(order.total_amount || 0).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+            </div>
+        </div>
+        
+        ${productNames.length > 0 ? `
+            <div style="padding: 12px; background: #f8fafc; border-radius: 8px; margin-top: 12px;">
+                <div style="font-size: 13px; color: #475569; margin-bottom: 5px;">
+                    <strong>Productos:</strong>
+                </div>
+                <div style="font-size: 13px; color: #64748b;">
+                    ${escapeHtml(productNames.slice(0, 3).join(', '))}
+                    ${productNames.length > 3 ? ` y ${productNames.length - 3} más` : ''}
+                </div>
+            </div>
+        ` : ''}
+        
+        <div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid #e2e8f0; text-align: center;">
+            <span style="font-size: 12px; color: #3b82f6; font-weight: 500;">
+                <i class="fas fa-eye"></i> Hacer clic para ver factura completa
+            </span>
+        </div>
+    `;
+
+    return div;
+}
+
+// Función para exportar historial del usuario
+async function exportUserHistory() {
+    try {
+        const userName = document.getElementById('detail-user-name').textContent;
+        const userEmail = document.getElementById('detail-user-email').textContent;
+        
+        // Obtener datos actuales del modal
+        const orders = adminOrders.filter(order => 
+            order.customer_email === userEmail || 
+            (order.user_id && order.user_id === currentUserId)
+        );
+        
+        if (orders.length === 0) {
+            showNotification('No hay historial para exportar', 'warning');
+            return;
+        }
+        
+        // Crear contenido CSV
+        const headers = [
+            'Número de Orden',
+            'Fecha',
+            'Hora',
+            'Total',
+            'Método de Pago',
+            'Productos',
+            'Estado'
+        ];
+        
+        const rows = orders.map(order => {
+            const orderDate = new Date(order.created_at);
+            const dateStr = orderDate.toLocaleDateString('es-ES');
+            const timeStr = orderDate.toLocaleTimeString('es-ES');
+            
+            // Obtener productos
+            let productList = [];
+            if (order.items) {
+                try {
+                    let itemsData = order.items;
+                    if (typeof itemsData === 'string') {
+                        itemsData = JSON.parse(itemsData);
+                    }
+                    if (Array.isArray(itemsData)) {
+                        productList = itemsData.map(item => 
+                            `${item.name || item.product_name} x${item.quantity || 1}`
+                        );
+                    }
+                } catch (error) {
+                    console.error('Error procesando items para export:', error);
+                }
+            }
+            
+            return [
+                `"${order.invoice_number || order.id}"`,
+                `"${dateStr}"`,
+                `"${timeStr}"`,
+                order.total_amount,
+                `"${order.payment_method || 'Por WhatsApp'}"`,
+                `"${productList.join(', ')}"`,
+                '"Confirmado"'
+            ];
+        });
+        
+        const csvContent = [
+            `Usuario: ${userName}`,
+            `Email: ${userEmail}`,
+            `Fecha de exportación: ${new Date().toLocaleDateString('es-ES')}`,
+            '',
+            headers.join(','),
+            ...rows.map(row => row.join(','))
+        ].join('\n');
+        
+        // Crear y descargar archivo
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        
+        link.setAttribute('href', url);
+        link.setAttribute('download', `historial_${userName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`);
+        link.style.visibility = 'hidden';
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        showNotification('Historial exportado exitosamente', 'success');
+        
+    } catch (error) {
+        console.error('❌ Error exportando historial:', error);
+        showNotification('Error al exportar historial', 'error');
+    }
+}
+
+// Función para ocultar el modal de detalles del usuario
+function hideUserDetailModal() {
+    console.log('🔴 Cerrando modal de detalles de usuario...');
+
+    const modal = document.getElementById('user-detail-modal');
+    const overlay = document.getElementById('overlay');
+
+    if (modal) {
+        modal.style.display = 'none';
+        modal.classList.remove('active');
+    }
+
+    if (overlay) {
+        overlay.style.display = 'none';
+    }
+
+    document.body.style.overflow = '';
+    document.body.style.position = '';
+    document.body.style.width = '';
+}
+
+// Variable para almacenar el ID del usuario actual
+let currentUserId = null;
+
+// Hacer las funciones disponibles globalmente
+window.showUserDetail = showUserDetail;
+window.hideUserDetailModal = hideUserDetailModal;
+window.exportUserHistory = exportUserHistory;
+
